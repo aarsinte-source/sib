@@ -14,8 +14,10 @@ export default async function CampagnePage() {
       <Eyebrow>Media buyer su richiesta</Eyebrow>
       <H1>Campagne</H1>
       <p className="mt-2 max-w-2xl text-sm text-[var(--on-surface-2)]">
-        Ogni campagna nasce bloccata: nessun account pubblicitario Meta SHEis è collegato in questo
-        ambiente. È un impianto onesto — dichiara cosa manca invece di fingere un lancio.
+        Scrivi in italiano che campagna vuoi: il motore sceglie il modello, costruisce pubblico,
+        budget e calendario, e prepara il contenuto esatto che partirebbe per Meta. Ogni campagna
+        nasce ferma — SHEis non ha ancora un proprio account pubblicitario — e il motore dice
+        esattamente cosa manca invece di fingere un lancio.
       </p>
       <div className="mt-8">
         <CampagneClient puoLanciare={sessione.ruolo === "mauro" || sessione.ruolo === "marketing"} />
