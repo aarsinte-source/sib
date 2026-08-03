@@ -31,6 +31,8 @@ export type Analisi = {
   creatoIl: string;
   /** Quale motore ha generato questa analisi — visibile in UI (SPEC.md §"Il degrado si dichiara"). */
   motore: Motore;
+  /** Motori falliti prima di quello che ha risposto. Mostrato in UI: un ripiego silenzioso è un guasto mai riparato. */
+  ripieghi: string[];
 };
 
 export async function POST(req: Request) {
@@ -48,7 +50,7 @@ export async function POST(req: Request) {
       `Tema: "${query}".` +
       (fonti.length ? `\n\nSegnali grezzi dal web (spunti, non citarne prezzi):\n- ${fonti.join("\n- ")}` : "");
 
-    const { dati: raw, motore } = await generaJSON(SYSTEM, user);
+    const { dati: raw, motore, ripieghi } = await generaJSON(SYSTEM, user);
 
     const analisi: Analisi = {
       query,
@@ -59,6 +61,7 @@ export async function POST(req: Request) {
       fonti,
       creatoIl: new Date().toISOString(),
       motore,
+      ripieghi,
     };
 
     return NextResponse.json({ analisi });

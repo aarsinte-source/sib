@@ -2,16 +2,31 @@ import Link from "next/link";
 import { getSessione, RUOLO_LABEL } from "@/lib/auth";
 import LogoutButton from "@/components/LogoutButton";
 
-const VOCI = [
-  { href: "/cruscotto", label: "Cruscotto" },
-  { href: "/analisi", label: "Analisi" },
+/**
+ * Due gruppi, e la separazione ha un motivo.
+ *
+ * A sinistra la CATENA: le pagine che si attraversano in ordine, dalla ricerca
+ * all'uscita. «Produzione» è la vista d'insieme e viene per prima, perché la
+ * domanda di chi entra non è «dove sta la funzione X» ma «a che punto siamo».
+ *
+ * A destra i PRESIDI: outreach, campagne, sito, report. Non hanno un ordine
+ * fra loro e non dipendono dalla catena — mescolarli alle fasi faceva sembrare
+ * che ci fossero undici passi da fare, quando i passi sono sette.
+ */
+const CATENA = [
+  { href: "/produzione", label: "Produzione" },
+  { href: "/ricerca", label: "Analisi" },
   { href: "/piano", label: "Piano" },
   { href: "/creativita", label: "Creatività" },
   { href: "/calendario", label: "Calendario" },
+] as const;
+
+const PRESIDI = [
   { href: "/outreach", label: "Outreach" },
   { href: "/campagne", label: "Campagne" },
   { href: "/sito", label: "Sito" },
   { href: "/report", label: "Report" },
+  { href: "/cruscotto", label: "Stato" },
 ] as const;
 
 export default async function Nav() {
@@ -26,11 +41,21 @@ export default async function Nav() {
 
         {sessione ? (
           <nav className="flex flex-wrap items-center gap-1 text-sm">
-            {VOCI.map((v) => (
+            {CATENA.map((v) => (
               <Link
                 key={v.href}
                 href={v.href}
                 className="rounded-full px-3 py-1.5 text-[var(--on-surface-2)] transition hover:bg-[var(--surface-2)] hover:text-[var(--on-surface)]"
+              >
+                {v.label}
+              </Link>
+            ))}
+            <span className="mx-1 h-4 w-px bg-[var(--hairline-strong)]" aria-hidden />
+            {PRESIDI.map((v) => (
+              <Link
+                key={v.href}
+                href={v.href}
+                className="rounded-full px-3 py-1.5 text-[var(--on-surface-3)] transition hover:bg-[var(--surface-2)] hover:text-[var(--on-surface)]"
               >
                 {v.label}
               </Link>

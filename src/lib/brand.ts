@@ -1,3 +1,4 @@
+import { SLUG_MARCHI } from "./marchi";
 import brandIdentityRaw from "@/brand/BRAND-IDENTITY.json";
 import guardrailsRaw from "@/brand/guardrails.json";
 
@@ -15,13 +16,32 @@ export type Guardrails = typeof guardrailsRaw;
 export const BRAND: BrandIdentity = brandIdentityRaw;
 export const GUARDRAILS: Guardrails = guardrailsRaw;
 
-export type Brand = "sheis-color" | "babilon" | "younic";
+export type Brand =
+  | "sheis-beauty"
+  | "sheis-color"
+  | "sheis-color-first"
+  | "younic"
+  | "babilon"
+  | "vr-intelligent";
 export type Canale = "instagram" | "facebook" | "tiktok" | "linkedin";
 export type Pubblico = "distributore-estero" | "distributore-italia" | "salone";
 export type Lingua = "it" | "en" | "es";
 export type Formato = "statico" | "carosello" | "video" | "ugc";
 
-export const BRANDS: readonly Brand[] = ["sheis-color", "babilon", "younic"];
+/**
+ * ⚠️ SEI marchi, non tre. La fonte è il registro generato `marchi.ts`, che a
+ * sua volta nasce da ~/alkemia-sheis-backend/marchi.json — cioè dai file
+ * vettoriali che Mauro ha consegnato il 2026-08-04.
+ *
+ * Fino a quel giorno questa riga era un elenco scritto a mano di tre marchi,
+ * dedotti dalle trascrizioni. Ne mancavano tre: il marchio ombrello SHEis
+ * BEAUTY, la linea SHEis COLOR FIRST e VR Intelligent. Un elenco scritto a
+ * mano non sbaglia il giorno che lo scrivi: sbaglia il giorno che la realtà
+ * cambia e nessuno lo aggiorna.
+ *
+ * L'ordine è quello del registro, che è quello del foglio marchi del cliente.
+ */
+export const BRANDS: readonly Brand[] = SLUG_MARCHI as readonly Brand[];
 export const CANALI: readonly Canale[] = ["instagram", "facebook", "tiktok", "linkedin"];
 export const PUBBLICI: readonly Pubblico[] = [
   "distributore-estero",
@@ -32,9 +52,12 @@ export const LINGUE: readonly Lingua[] = ["it", "en", "es"];
 export const FORMATI: readonly Formato[] = ["statico", "carosello", "video", "ugc"];
 
 export const BRAND_LABEL: Record<Brand, string> = {
-  "sheis-color": "SHEis Color",
-  babilon: "BABILON",
+  "sheis-beauty": "SHEis BEAUTY",
+  "sheis-color": "SHEis COLOR",
+  "sheis-color-first": "SHEis COLOR FIRST",
   younic: "YOUNIC",
+  babilon: "BABILON",
+  "vr-intelligent": "VR Intelligent",
 };
 
 /**

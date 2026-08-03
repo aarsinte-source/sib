@@ -5,18 +5,25 @@ import os from "node:os";
 import path from "node:path";
 
 /**
- * Generazione testi con DUE motori, in ordine, e il ripiego dichiarato.
+ * Generazione testi con TRE motori, in ordine, e il ripiego dichiarato.
  *
- * 1. Claude headless (`claude --print`), se il binario è presente. Stesso
- *    pattern di ~/alkemia-sheis-outreach/sheis_outreach/composer.py: prompt
- *    unico (system+user concatenati), timeout esplicito (il processo non
- *    deve appendere una richiesta web per sempre), estrazione della risposta
- *    fra tag invece di sperare in un output "solo JSON".
- * 2. OpenAI, se OPENAI_API_KEY è impostata (era l'unico motore, oggi la
- *    chiave è vuota e non recuperabile — Vercel la marca "Sensitive").
- * 3. Se nessuno dei due funziona: ApiError con il motivo di ENTRAMBI i
- *    tentativi, non un errore tecnico incomprensibile (SPEC.md §"Il degrado
- *    si dichiara").
+ * 1. OpenRouter (HTTP). È il motore PRINCIPALE, e l'ordine non è casuale:
+ *    è l'unico dei tre che funziona anche quando il portale non gira sul
+ *    portatile di Andrei. Su Vercel non esiste alcun processo locale da
+ *    lanciare, quindi un motore che dipende da un binario installato è un
+ *    motore che il giorno del trasloco smette di esistere.
+ * 2. Claude headless (`claude --print`), se il binario è presente. Resta
+ *    come riserva locale.
+ *    ⚠️ MISURATO il 2026-08-04: su questa macchina `claude --print` NON
+ *    risponde — resta appeso oltre i 45 secondi senza scrivere un byte, e
+ *    il timeout a 300s lo uccide. È il difetto già noto del ponte headless
+ *    (la CLI aspetta una conferma interattiva che in `--print` nessuno può
+ *    dare). Per questo è stato retrocesso da primo a secondo: era il primo,
+ *    e faceva aspettare cinque minuti prima di provare qualcosa che
+ *    funzionava.
+ * 3. OpenAI, se OPENAI_API_KEY è impostata.
+ * 4. Se nessuno funziona: ApiError col motivo di OGNI tentativo, non un
+ *    errore tecnico incomprensibile (SPEC.md §"Il degrado si dichiara").
  *
  * Il motore che ha prodotto il testo viene sempre restituito insieme ai
  * dati: chi consuma il risultato lo mostra in UI, così chi legge un piano
@@ -33,14 +40,116 @@ export class ApiError extends Error {
   }
 }
 
-export type Motore = "claude" | "openai";
+export type Motore = "openrouter" | "claude" | "openai";
 
 export type RisultatoGenerazione = {
   dati: Record<string, unknown>;
   motore: Motore;
+  /**
+   * I motori provati PRIMA di quello che ha funzionato, col motivo del
+   * fallimento. Vuoto quando il primo ha risposto.
+   *
+   * ⚠️ Esiste per un difetto vero, non per completezza. Il 2026-08-04 il
+   * portale ha prodotto un'analisi dichiarando `motore: claude`: significava
+   * che OpenRouter aveva fallito con un 401 e nessuno lo diceva. La chiamata
+   * riusciva, quindi il guasto era invisibile — e un motore rotto che nessuno
+   * vede resta rotto, finché un giorno non cade anche il ripiego e allora
+   * cadono tutti insieme.
+   */
+  ripieghi: string[];
 };
 
-/* ------------------------------------------------------- motore 1: Claude */
+/* --------------------------------------------------- motore 1: OpenRouter */
+
+const OPENROUTER_MODELLO = process.env.OPENROUTER_MODEL || "anthropic/claude-sonnet-4.5";
+// 240s: un piano a 30 giorni è la richiesta più lunga che passa di qui, e su
+// Vercel il tetto della funzione è comunque più basso — chi la supera lo vede
+// dal messaggio, non da una pagina che gira a vuoto.
+const OPENROUTER_TIMEOUT_MS = Number(process.env.OPENROUTER_TIMEOUT_MS || 240_000);
+
+/**
+ * Ripulisce una risposta che dovrebbe essere solo JSON. Serve anche qui, non
+ * solo per la CLI: MISURATO il 2026-08-04, con `response_format: json_object`
+ * il modello ha comunque incorniciato la risposta in un fence markdown. Un
+ * `JSON.parse` diretto sarebbe fallito su una chiamata già pagata.
+ */
+function ripulisciJSON(testo: string): string {
+  let c = testo.trim();
+  const tag = c.match(/<risposta>([\s\S]*?)<\/risposta>/i);
+  if (tag) c = tag[1].trim();
+  if (c.startsWith("```")) {
+    c = c.replace(/^```[a-zA-Z]*\n?/, "").replace(/```\s*$/, "").trim();
+  }
+  // Ultima rete: se resta del testo attorno, si prende il primo oggetto JSON
+  // bilanciato invece di arrendersi.
+  if (!c.startsWith("{")) {
+    const i = c.indexOf("{");
+    const j = c.lastIndexOf("}");
+    if (i >= 0 && j > i) c = c.slice(i, j + 1);
+  }
+  return c;
+}
+
+async function generaConOpenRouter(system: string, user: string): Promise<Record<string, unknown>> {
+  const key = process.env.OPENROUTER_API_KEY;
+  if (!key) throw new Error("OPENROUTER_API_KEY non impostata");
+
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), OPENROUTER_TIMEOUT_MS);
+  let r: Response;
+  try {
+    r = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      signal: ctrl.signal,
+      headers: {
+        authorization: `Bearer ${key}`,
+        "content-type": "application/json",
+        // OpenRouter chiede l'identificazione dell'applicazione: senza, alcune
+        // rotte rispondono con limiti più stretti.
+        "HTTP-Referer": process.env.OPENROUTER_REFERER || "https://sheis.alkemia",
+        "X-Title": "SHEis Studio",
+      },
+      body: JSON.stringify({
+        model: OPENROUTER_MODELLO,
+        temperature: 0.7,
+        response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: user },
+        ],
+      }),
+    });
+  } catch (e) {
+    if (e instanceof Error && e.name === "AbortError") {
+      throw new Error(`timeout dopo ${Math.round(OPENROUTER_TIMEOUT_MS / 1000)}s`);
+    }
+    throw new Error(`errore di rete (${e instanceof Error ? e.message : "sconosciuto"})`);
+  } finally {
+    clearTimeout(timer);
+  }
+
+  if (!r.ok) {
+    const corpo = await r.text().catch(() => "");
+    throw new Error(`ha risposto ${r.status}${corpo ? ` — ${corpo.slice(0, 200)}` : ""}`);
+  }
+
+  const j = (await r.json()) as {
+    choices?: { message?: { content?: string } }[];
+    error?: { message?: string };
+  };
+  if (j.error?.message) throw new Error(j.error.message.slice(0, 200));
+  const content = j.choices?.[0]?.message?.content;
+  if (!content) throw new Error("risposta vuota");
+
+  const corpo = ripulisciJSON(content);
+  try {
+    return JSON.parse(corpo) as Record<string, unknown>;
+  } catch {
+    throw new Error(`formato non valido, parsing JSON fallito su: ${corpo.slice(0, 200)}`);
+  }
+}
+
+/* ------------------------------------------------------- motore 2: Claude */
 
 // 300s di default: più alto dei 180s di ~/alkemia-sheis-outreach/sheis_outreach/config.py
 // perché lì un tocco è UN messaggio breve, qui un piano editoriale sono 8 post
@@ -126,7 +235,7 @@ FORMATO DI OUTPUT — obbligatorio e non negoziabile: racchiudi l'oggetto JSON d
   }
 }
 
-/* ------------------------------------------------------- motore 2: OpenAI */
+/* ------------------------------------------------------- motore 3: OpenAI */
 
 async function generaConOpenAI(system: string, user: string): Promise<Record<string, unknown>> {
   const key = process.env.OPENAI_API_KEY;
@@ -168,29 +277,50 @@ async function generaConOpenAI(system: string, user: string): Promise<Record<str
 /* -------------------------------------------------------- orchestratore */
 
 /**
- * Prova Claude headless, poi OpenAI, e restituisce SEMPRE quale motore ha
- * prodotto il risultato. Se entrambi falliscono (o mancano), solleva un
- * ApiError 503 col motivo di ciascun tentativo — mai un errore tecnico
- * incomprensibile propagato al chiamante.
+ * Prova OpenRouter, poi Claude locale, poi OpenAI, e restituisce SEMPRE quale
+ * motore ha prodotto il risultato. Se falliscono tutti, solleva un ApiError
+ * 503 col motivo di ciascun tentativo — mai un errore tecnico incomprensibile
+ * propagato al chiamante.
+ *
+ * ⚠️ `SOLO_MOTORI_HTTP=1` disattiva il motore locale. Va impostata ovunque il
+ * portale non giri sul portatile (Vercel lo fa da sé, vedi sotto): senza,
+ * l'ambiente proverebbe a lanciare un binario che non c'è e sprecherebbe un
+ * tentativo per dire una cosa già nota.
  */
+const SOLO_HTTP =
+  process.env.SOLO_MOTORI_HTTP === "1" || !!process.env.VERCEL || !!process.env.AWS_LAMBDA_FUNCTION_NAME;
+
 export async function generaJSON(system: string, user: string): Promise<RisultatoGenerazione> {
   const tentativi: string[] = [];
 
-  if (claudeDisponibile()) {
+  if (process.env.OPENROUTER_API_KEY) {
     try {
-      const dati = await generaConClaude(system, user);
-      return { dati, motore: "claude" };
+      const dati = await generaConOpenRouter(system, user);
+      return { dati, motore: "openrouter", ripieghi: [] };
     } catch (e) {
-      tentativi.push(`Claude: ${e instanceof Error ? e.message : "errore sconosciuto"}.`);
+      tentativi.push(`OpenRouter: ${e instanceof Error ? e.message : "errore sconosciuto"}.`);
     }
   } else {
-    tentativi.push(`Claude: binario non trovato in "${claudeBinPath()}".`);
+    tentativi.push("OpenRouter: OPENROUTER_API_KEY non impostata.");
+  }
+
+  if (!SOLO_HTTP) {
+    if (claudeDisponibile()) {
+      try {
+        const dati = await generaConClaude(system, user);
+        return { dati, motore: "claude", ripieghi: [...tentativi] };
+      } catch (e) {
+        tentativi.push(`Claude locale: ${e instanceof Error ? e.message : "errore sconosciuto"}.`);
+      }
+    } else {
+      tentativi.push(`Claude locale: binario non trovato in "${claudeBinPath()}".`);
+    }
   }
 
   if (process.env.OPENAI_API_KEY) {
     try {
       const dati = await generaConOpenAI(system, user);
-      return { dati, motore: "openai" };
+      return { dati, motore: "openai", ripieghi: [...tentativi] };
     } catch (e) {
       tentativi.push(`OpenAI: ${e instanceof Error ? e.message : "errore sconosciuto"}.`);
     }
@@ -205,6 +335,7 @@ export async function generaJSON(system: string, user: string): Promise<Risultat
 }
 
 export const MOTORE_LABEL: Record<Motore, string> = {
+  openrouter: "OpenRouter",
   claude: "Claude (locale)",
   openai: "OpenAI",
 };

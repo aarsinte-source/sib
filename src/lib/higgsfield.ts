@@ -33,21 +33,51 @@ import {
 export type { QualitaImmagine };
 export { COSTO_EUR_PER_CREDITO, CREDITI_PER_VARIANTE, QUALITA_LABEL, costoStimato };
 
+/**
+ * La scena per ciascun marchio. SEI marchi, come il registro `marchi.ts`.
+ *
+ * ⚠️ Regola sui `segno`: contengono SOLO fatti documentati. «83 sfumature» e
+ * «99% di origine naturale» lo sono; per i tre marchi aggiunti il 2026-08-04
+ * non esiste ancora nessun fatto documentato, quindi il loro `segno` descrive
+ * un registro visivo e NON afferma nulla sul prodotto. Inventare una
+ * caratteristica qui significa stamparla su una creativa che va al cliente.
+ *
+ * ⚠️ Nessun `soggetto` chiede mai testo, logo o lettering: il marchio si
+ * compone DOPO, dal file vettoriale. Vedi marchi.json §prompt_generativo.
+ */
 const BRAND_PROMPT: Record<Brand, { palette: string; soggetto: string; segno: string }> = {
+  "sheis-beauty": {
+    palette: "warm bone, ivory and near-black ink, no saturated colour",
+    soggetto:
+      "a restrained corporate still-life: professional hair-care vessels grouped on a clean matte surface, shot as a company portrait rather than a product shot",
+    segno: "evoke an established Italian professional house, quiet authority, nothing shouted",
+  },
   "sheis-color": {
     palette: "warm bone and near-black ink tones with restrained desaturated gold accents",
     soggetto: "an editorial still-life of a professional hair-colour tube resting beside a fanned-out colour swatch chart",
     segno: "evoke the depth of an 83-shade professional colour range, ammonia-free and precise",
+  },
+  "sheis-color-first": {
+    palette: "warm bone and near-black ink, one cool grey accent, high contrast",
+    soggetto:
+      "an editorial still-life of a single professional hair-colour tube isolated on a clean surface, strong directional light, generous negative space",
+    segno: "evoke a first, decisive step in a professional colour service — clarity, not abundance",
+  },
+  younic: {
+    palette: "calm spa neutrals, warm greys and a single soft gold highlight",
+    soggetto: "an editorial still-life of professional hair-treatment vessels arranged on a clean surface",
+    segno: "evoke a structured three-phase professional treatment, clinical yet warm",
   },
   babilon: {
     palette: "soft botanical greens, earthy neutrals and warm bone light",
     soggetto: "an editorial still-life of a professional hair-care bottle among natural botanical elements, dried leaves and raw stone",
     segno: "evoke 99% natural-origin, honest and quiet, nothing artificial in frame",
   },
-  younic: {
-    palette: "calm spa neutrals, warm greys and a single soft gold highlight",
-    soggetto: "an editorial still-life of professional hair-treatment vessels arranged on a clean surface",
-    segno: "evoke a structured three-phase professional treatment, clinical yet warm",
+  "vr-intelligent": {
+    palette: "cool neutral greys, pure black and clean white, no warmth",
+    soggetto:
+      "a precise technical still-life of professional salon vessels on a geometric surface, architectural light, hard clean edges and measured shadows",
+    segno: "evoke method and measurement in a professional salon context — controlled, engineered, unsentimental",
   },
 };
 

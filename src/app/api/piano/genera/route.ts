@@ -58,7 +58,7 @@ Analisi di mercato:
 - lessico: ${analisi.lessico.join("; ")}
 - angoli: ${analisi.angoli.join("; ")}`;
 
-    const { dati: raw, motore } = await generaJSON(SYSTEM, user);
+    const { dati: raw, motore, ripieghi } = await generaJSON(SYSTEM, user);
     const lista = Array.isArray(raw.posts) ? raw.posts : [];
 
     const piano = await creaPiano(query);
@@ -91,7 +91,7 @@ Analisi di mercato:
     }
 
     const contenuti = await creaContenuti(righe);
-    return NextResponse.json({ piano, contenuti, motore });
+    return NextResponse.json({ piano, contenuti, motore, ripieghi });
   } catch (e) {
     return rispondiErrore(e);
   }
