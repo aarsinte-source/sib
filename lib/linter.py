@@ -27,6 +27,8 @@ import re
 import unicodedata
 from dataclasses import dataclass, field
 
+from .vincoli_brand import PATTERN_NEGOZIO, negozio_eccezione, numero_documentato
+
 BLOCK, WARN = "BLOCK", "WARN"
 
 # ⚠️ REGRESSIONE ⑥b (revisione avversariale 2026-08-03): un carattere
@@ -123,31 +125,13 @@ PREZZO_NUDO = [
 ]
 
 # ------------------------------------------------- 2. lessico da negozio (multilingua)
-# Lista letterale richiesta: shop, carrello, acquista, cart, tienda, panier, Warenkorb,
-# koszyk, loja, متجر — più le varianti immediate (verbo comprare, e-commerce, checkout).
-NEGOZIO_PATTERNS = [
-    (r"\bshop\b", "shop (EN/IT) — vietato, si dice 'portale ordini'/'area riservata'"),
-    (r"\bnegozio\b", "negozio (IT)"),
-    (r"\bcarrello\b", "carrello (IT)"),
-    (r"\bacquista\b|\bacquistare\b", "acquista (IT)"),
-    (r"\bcompra\b|\bcomprare\b|\bcomprato\b", "compra/comprare (IT)"),
-    (r"\border(a|are|ina)\b", "ordina/ordinare come CTA d'acquisto diretto (IT)"),
-    (r"\bcart\b", "cart (EN)"),
-    (r"\bbuy\s?now\b|\bbuy\b", "buy (EN)"),
-    (r"\bcheckout\b", "checkout (EN)"),
-    (r"\be-?commerce\b", "e-commerce"),
-    (r"\btienda\b", "tienda (ES)"),
-    (r"\bcomprar\b", "comprar (ES)"),
-    (r"\bpanier\b", "panier (FR)"),
-    (r"\bacheter\b", "acheter (FR)"),
-    (r"\bwarenkorb\b", "Warenkorb (DE)"),
-    (r"\bkaufen\b", "kaufen (DE)"),
-    (r"\bkoszyk\w*\b", "koszyk (PL) — anche forme declinate (koszyka/koszyku/koszykiem)"),
-    (r"\bloja\b", "loja (PT)"),
-    (r"\bcomprar\b", "comprar (PT)"),
-    (r"متجر", "متجر — shop (AR)"),
-    (r"عربة\s*تسوق|سلة\s*التسوق", "carrello (AR)"),
-]
+#
+# Questa lista NON si scrive più qui. Era ricopiata a mano da BRAND-IDENTITY e
+# aveva perso per strada spagnolo, portoghese e polacco declinato: «carrito»,
+# «carrinho» e «koszyka» passavano da questo filtro mentre il gemello
+# dell'outreach li bloccava — due verdetti opposti sullo stesso testo, e nessuno
+# dei due che sembrasse rotto. Ora arriva generata dalla fonte.
+NEGOZIO_PATTERNS = PATTERN_NEGOZIO
 # Eccezione dichiarata: SHEis usa legittimamente "non vendiamo online" per NEGARE
 # l'e-commerce — è la leva, non la violazione. Vale sullo stesso pattern dell'outreacher.
 NEGOZIO_AMMESSO = [
@@ -189,15 +173,29 @@ CLAIM_QUANTIFICATO = [
     (r"\b\d{1,3}\s?%", "percentuale non nell'elenco documentato"),
     (r"\b\d+\s*(minuti|minuto|ore|ora)\b", "durata quantificata non documentata"),
     (r"\b\d+\s*(giorni|giorno|mesi|mese|anni|anno)\b", "quantità temporale non documentata (garanzia/esperienza)"),
+    # ⚠️ Buco misurato il 3/8 sulla batteria d'insieme: «Con le nostre 120 nuance
+    # disponibili» passava da TUTTI i filtri. La cartella SHEis Color ne ha 83 —
+    # un numero sbagliato sull'unico dato di prodotto che il mercato verifica in
+    # due secondi. Non era una divergenza fra filtri: era un buco condiviso, che
+    # solo una prova d'insieme poteva far vedere.
+    (r"\b\d+\s*(nuance|nuances|tonalit\w*|tonos|matices|shades)\b",
+     "ampiezza di gamma non documentata (la cartella SHEis Color ha 83 nuance)"),
+    (r"\b\d+\s*(client[ie]|salon[ie]|distributor[ie]|paesi|mercati)\b",
+     "quantità commerciale non documentata"),
 ]
-_CLAIM_AMMESSI_CONTESTO = [
-    re.compile(r"15\s*minuti[^.\n]{0,20}posa|posa[^.\n]{0,20}15\s*minuti", re.IGNORECASE),
-    re.compile(r"99\s?%[^.\n]{0,25}natural", re.IGNORECASE),
-    re.compile(r"natural[^.\n]{0,25}99\s?%", re.IGNORECASE),
-]
+# La whitelist era ricopiata a mano anche qui, in una terza forma ancora
+# diversa. Ora viene dalla fonte: `numero_documentato` legge NUMERI_DOCUMENTATI
+# generato da BRAND-IDENTITY. Aggiungere un numero documentato si fa lì, una
+# volta sola, e vale per tutti e quattro i filtri insieme.
 
 CLAIM_ASSOLUTO_PATTERNS = [
-    (r"\bclinicamente (provato|testato)\b|\bclinically proven\b|\bscientificamente provato\b",
+    # ⚠️ Accordo di genere e numero: fino al 3/8 questa riga cercava «provato» al
+    # maschile singolare, e «Formula clinicamente provata» — la forma naturale in
+    # italiano, visto che «formula» è femminile — passava da tre filtri su quattro.
+    # È lo stesso errore di forma già pagato altrove: si intercetta il caso da
+    # manuale e si lascia passare quello che qualcuno scriverebbe davvero.
+    (r"\bclinicamente\s+(provat|testat|dimostrat)\w*|\bclinically proven\b|"
+     r"\bscientificamente\s+(provat|dimostrat)\w*|\bcl[íi]nicamente\s+(probad|test)\w*",
      "claim clinico non documentato (serve CPNP/PIF)"),
     (r"\brisultati garantiti\b|\bgarantiamo\b|\bgarantito al\b|\bguaranteed results\b|\bresultados garantizados\b",
      "garanzia di risultato — vietata in cosmetica senza prova regolatoria"),
@@ -222,6 +220,10 @@ def _find(testo: str, patterns, livello: str, regola: str) -> list[Violazione]:
 
 
 def _negozio_ammesso(testo: str, frase: str) -> bool:
+    # Prima: la parola è innocente? Il confronto per radice prende «ordinario»
+    # insieme a «ordina» — le eccezioni sono dichiarate nella fonte, non qui.
+    if negozio_eccezione(frase):
+        return True
     basso = testo.lower()
     idx = basso.find(frase.lower())
     finestra = basso[max(0, idx - 60): idx + len(frase) + 25]
@@ -229,10 +231,7 @@ def _negozio_ammesso(testo: str, frase: str) -> bool:
 
 
 def _claim_ammesso(testo: str, span: tuple[int, int]) -> bool:
-    inizio = max(0, span[0] - 30)
-    fine = min(len(testo), span[1] + 30)
-    intorno = testo[inizio:fine]
-    return any(p.search(intorno) for p in _CLAIM_AMMESSI_CONTESTO)
+    return numero_documentato(testo, span[0], span[1])
 
 
 def lint_pubblicazione(testo: str, canale: str = "generico") -> LintResult:
