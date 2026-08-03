@@ -27,7 +27,11 @@ import re
 import unicodedata
 from dataclasses import dataclass, field
 
-from .vincoli_brand import PATTERN_NEGOZIO, negozio_eccezione, numero_documentato
+from .vincoli_brand import (PATTERN_NEGOZIO, negozio_eccezione, numero_documentato,
+                            nega_il_canale, viola_firewall, CLAIM_VIETATI,
+                            FIREWALL_PATTERN, PREZZO)
+
+from re import escape as _re_escape
 
 BLOCK, WARN = "BLOCK", "WARN"
 
@@ -120,6 +124,16 @@ PREZZO_PATTERNS = [
         "lessico prezzo/sconto/listino/margine — SHEis non mostra mai un prezzo pubblico",
     ),
 ]
+
+# ⚠️ La fonte elenca fra le cifre commerciali vietate anche «offerta»,
+# «promo» e «saldo». Questa lista, scritta a mano, non le aveva: «Scrivici
+# per ricevere un'offerta commerciale» passava di qui e veniva bloccata
+# dagli altri due filtri. I termini della fonte si aggiungono, non si
+# ricopiano — se domani ne arriva un altro, arriva da solo.
+PREZZO_PATTERNS += [
+    (r"\b" + _re_escape(t) + r"\w{0,3}\b", f"termine commerciale vietato dalla fonte: «{t}»")
+    for t in PREZZO if t.isalpha() and len(t) >= 5
+]
 PREZZO_NUDO = [
     (r"\bprezzo|prezzi|precio|precios|price|prices\b", "parola 'prezzo' nominata"),
 ]
@@ -143,28 +157,12 @@ NEGOZIO_AMMESSO = [
 
 # ---------------------------------------------------------- 3. firewall Metodo 29
 # Trasversale, sempre BLOCK, nessuna eccezione — vedi guardrails.json forbidden_pairs.
-M29_PATTERNS = [
-    (r"\bmetodo\s*29\b", "Metodo 29 (IT) — firewall non negoziabile"),
-    (r"\bmetodo29\b", "Metodo29 (IT, senza spazio)"),
-    (r"\bmethod\s*29\b", "Method 29 (EN)"),
-    (r"\bm[eé]todo\s*29\b", "método 29 (ES)"),
-    (r"\bm[-.\s]?29\b", "sigla M29/M-29/M.29"),
-    (r"\bmetodo\s*ventinove\b|\bmetodo\s*ventinovesimo\b", "Metodo Ventinove (grafia estesa IT)"),
-    # T13 (firewall-m29.md): parafrasi che aggira il nome per numero/ordinale —
-    # "ventinovesimo pilastro", "metodo esclusivo... 29", ecc. Il collegamento resta
-    # ricostruibile: si blocca la CO-OCCORRENZA fra un ordinale/numero "29"/"ventinove"
-    # e un lessico da "metodo interno esclusivo".
-    (
-        r"(ventinovesim\w*|ventinove|\b29\b)[^.\n]{0,40}"
-        r"(pilastr\w*|metodo\s*esclusiv\w*|sistema\s*esclusiv\w*|segreto\s*interno)",
-        "parafrasi elusiva del firewall (numero/ordinale 29 + 'metodo esclusivo/pilastro')",
-    ),
-    (
-        r"(pilastr\w*|metodo\s*esclusiv\w*|sistema\s*esclusiv\w*|segreto\s*interno)"
-        r"[^.\n]{0,40}(ventinovesim\w*|ventinove|\b29\b)",
-        "parafrasi elusiva del firewall (ordine invertito)",
-    ),
-]
+# ⚠️ Il firewall NON si scrive più qui. Il collaudo del 3/8 ha misurato due
+# vie d'uscita da questo elenco: «il metodo-29» col trattino e «approccio
+# ventinove passi, applicato al metodo». Un elenco di stringhe non difende
+# una regola che il cliente ha dichiarato non negoziabile. Le forme vengono
+# dalla fonte e valgono per tutti e quattro i filtri insieme.
+M29_PATTERNS = [(f['pattern'], f['cosa']) for f in FIREWALL_PATTERN]
 
 # --------------------------------------------- 4/5. claim numerici e assoluti
 # Whitelist ESATTA (brand-identity.regole_di_generazione.numeri_ammessi):
@@ -188,26 +186,10 @@ CLAIM_QUANTIFICATO = [
 # generato da BRAND-IDENTITY. Aggiungere un numero documentato si fa lì, una
 # volta sola, e vale per tutti e quattro i filtri insieme.
 
-CLAIM_ASSOLUTO_PATTERNS = [
-    # ⚠️ Accordo di genere e numero: fino al 3/8 questa riga cercava «provato» al
-    # maschile singolare, e «Formula clinicamente provata» — la forma naturale in
-    # italiano, visto che «formula» è femminile — passava da tre filtri su quattro.
-    # È lo stesso errore di forma già pagato altrove: si intercetta il caso da
-    # manuale e si lascia passare quello che qualcuno scriverebbe davvero.
-    (r"\bclinicamente\s+(provat|testat|dimostrat)\w*|\bclinically proven\b|"
-     r"\bscientificamente\s+(provat|dimostrat)\w*|\bcl[íi]nicamente\s+(probad|test)\w*",
-     "claim clinico non documentato (serve CPNP/PIF)"),
-    (r"\brisultati garantiti\b|\bgarantiamo\b|\bgarantito al\b|\bguaranteed results\b|\bresultados garantizados\b",
-     "garanzia di risultato — vietata in cosmetica senza prova regolatoria"),
-    (r"\bil migliore (del mercato|in assoluto)\b|\bnumero\s?1 (in|del)\b|\bthe best on the market\b|"
-     r"\bel mejor del mercado\b|\bleader mondiale\b|\bleader assoluto\b",
-     "superlativo indimostrabile"),
-    (r"\bcura la (calvizie|alopecia)\b|\bfa ricrescere i capelli\b|\bblocca la caduta\b|"
-     r"\banticaduta garantito\b|\bregrows hair\b",
-     "claim medico/terapeutico — cosmetica non può promettere questo"),
-    (r"\b100\s?%\s*natural(e|i)?\b|\btotalmente naturale\b|\bcompletamente naturale\b|\b100%\s*natural\b",
-     "claim naturale assoluto — il dato reale documentato è 99% di origine naturale"),
-]
+# ⚠️ Anche i claim vengono dalla fonte. Scritti a mano lasciavano
+# passare i numeri in LETTERE: «YOUNIC lavora in cinque fasi» passava
+# da tutti e quattro i filtri, e le fasi documentate sono TRE.
+CLAIM_ASSOLUTO_PATTERNS = [(c['pattern'], c['cosa']) for c in CLAIM_VIETATI]
 
 
 def _find(testo: str, patterns, livello: str, regola: str) -> list[Violazione]:
@@ -223,6 +205,9 @@ def _negozio_ammesso(testo: str, frase: str) -> bool:
     # Prima: la parola è innocente? Il confronto per radice prende «ordinario»
     # insieme a «ordina» — le eccezioni sono dichiarate nella fonte, non qui.
     if negozio_eccezione(frase):
+        return True
+    # Poi: la frase NEGA il canale? È testo approvato, non una violazione.
+    if nega_il_canale(testo):
         return True
     basso = testo.lower()
     idx = basso.find(frase.lower())
@@ -248,7 +233,15 @@ def lint_pubblicazione(testo: str, canale: str = "generico") -> LintResult:
     v += _find(testo, PREZZO_PATTERNS, BLOCK, "prezzi-e-cifre-commerciali")
     v += _find(testo, PREZZO_NUDO, WARN, "prezzo-nominato")
     v += _find(testo, M29_PATTERNS, BLOCK, "firewall-metodo-29")
-    v += _find(testo, CLAIM_ASSOLUTO_PATTERNS, BLOCK, "claim-non-documentato")
+    # ⚠️ I claim ora includono le quantità scritte in LETTERE («cinque fasi»),
+    # e fra quelle c'è anche «tre fasi», che è documentata. Quindi anche questo
+    # controllo deve consultare l'elenco dei numeri leciti, esattamente come fa
+    # quello sulle cifre: senza, il filtro bloccherebbe il dato vero del
+    # cliente — l'errore che questa mattina abbiamo già pagato sul «99%».
+    for pat, dettaglio in CLAIM_ASSOLUTO_PATTERNS:
+        m = re.search(pat, testo, re.IGNORECASE)
+        if m and not _claim_ammesso(testo, m.span()):
+            v.append(Violazione(BLOCK, "claim-non-documentato", dettaglio, m.group(0).strip()))
 
     for viol in _find(testo, NEGOZIO_PATTERNS, BLOCK, "lessico-da-negozio"):
         if not _negozio_ammesso(testo, viol.frase):

@@ -1,6 +1,6 @@
 """GENERATO da sincronizza_brand.py — NON modificare a mano.
 
-Le liste qui sotto vengono da BRAND-IDENTITY_sheis_2026-08-03.json (impronta 86e45609bfb204f3).
+Le liste qui sotto vengono da BRAND-IDENTITY_sheis_2026-08-03.json (impronta 5fc2c9f5ed4fb43e).
 Modificarle qui significa reintrodurre esattamente il difetto per cui
 questo file esiste: quattro linter con quattro copie divergenti delle
 stesse regole, e verdetti opposti sullo stesso testo.
@@ -8,7 +8,7 @@ stesse regole, e verdetti opposti sullo stesso testo.
 Per cambiare una regola si modifica la fonte e si rilancia:
     python3 ~/alkemia-sheis-backend/sincronizza_brand.py --allinea
 """
-IMPRONTA_FONTE = '86e45609bfb204f3'
+IMPRONTA_FONTE = '5fc2c9f5ed4fb43e'
 
 NEGOZIO = [
     "shop",
@@ -134,7 +134,79 @@ CLAIM_VIETATI = [
     {
         "pattern": "\\b(senza\\s+alcun|zero)\\s+(effett\\w+\\s+collateral\\w+|rischi\\w*)",
         "cosa": "assenza assoluta di rischi"
+    },
+    {
+        "pattern": "\\b(due|tre|quattro|cinque|sei|sette|otto|nove|dieci)\\s+fas[ie]\\b",
+        "cosa": "numero di fasi scritto in lettere: il documentato è TRE (YOUNIC). «cinque fasi» passava da tutti e quattro"
+    },
+    {
+        "pattern": "\\b(due|tre|quattro|cinque|sei|sette|otto|nove|dieci|venti|trenta|cinquanta|cento)\\s+(nuance|tonalit\\w+|client\\w+|salon\\w+|distributor\\w+)\\b|\\b(due|tre|quattro|cinque|sei|sette|otto|nove|dieci|venti|trenta|cinquanta|cento)\\s+minut\\w+\\s+(di\\s+)?(posa|applicazion\\w+|trattament\\w+)",
+        "cosa": "quantità di PRODOTTO scritta in lettere fuori dall'elenco documentato (le durate di una conversazione — «ne parliamo in venti minuti» — sono lecite: conta l'oggetto, non il numero)"
     }
+]
+
+# Il firewall come FORME, non stringhe: «metodo-29» col trattino e la
+# parafrasi «ventinove passi ... metodo» sfuggivano a un elenco letterale.
+FIREWALL_PATTERN = [
+    {
+        "pattern": "\\bm[eé]todo?\\s*[-–_.]?\\s*29\\b",
+        "cosa": "Metodo 29 in ogni grafia (spazio, trattino, punto, unito)"
+    },
+    {
+        "pattern": "\\bmethod\\s*[-–_.]?\\s*29\\b",
+        "cosa": "Method 29 (EN)"
+    },
+    {
+        "pattern": "\\bm\\s*[-–_.]?\\s*29\\b",
+        "cosa": "sigla M29 / M-29 / M.29"
+    },
+    {
+        "pattern": "\\bmetodo\\s*[-–_.]?\\s*ventinov\\w*",
+        "cosa": "Metodo ventinove in lettere"
+    },
+    {
+        "pattern": "(ventinovesim\\w*|ventinove|\\b29\\b)[^.\\n]{0,60}(pilastr\\w*|metodo|sistema|approcci\\w*|passagg\\w*|pass[io]|fas[ei]|step|segreto)",
+        "cosa": "parafrasi: il numero ventinove vicino a metodo/sistema/approccio/passi"
+    },
+    {
+        "pattern": "(pilastr\\w*|metodo|sistema|approcci\\w*|passagg\\w*|pass[io]|fas[ei]|step|segreto)[^.\\n]{0,60}(ventinovesim\\w*|ventinove|\\b29\\b)",
+        "cosa": "parafrasi, ordine invertito"
+    }
+]
+
+# Forme che il confronto per radice non prende: «sklepie» (radice di 5
+# caratteri) e «gekauft» (il prefisso GE- spezza il confine di parola).
+FORME_FLESSE = [
+    "sklepie",
+    "sklepu",
+    "sklepy",
+    "sklepem",
+    "gekauft",
+    "gekaufte",
+    "kauft",
+    "kaufe",
+    "einkauf",
+    "einkaufen",
+    "cestas",
+    "cestita",
+    "comprado",
+    "comprada",
+    "comprou",
+    "achete",
+    "achetez",
+    "achetons"
+]
+
+# Frasi che NEGANO il canale: sono testo approvato, non violazioni.
+NEGAZIONI_AMMESSE = [
+    "non (siamo|vendiamo|c'?è|esiste)[^.\\n]{0,30}(online|e-?commerce|vendita)",
+    "n[éeè]\\s+(amazon|e-?commerce|online)",
+    "nessun[ao]?\\s+(e-?commerce|vendita online|negozio online)",
+    "niente\\s+e-?commerce",
+    "we don'?t sell online",
+    "no online sales",
+    "no vendemos online",
+    "no estamos en venta online"
 ]
 
 CTA_AMMESSE = [
@@ -202,8 +274,30 @@ def _radice(termine: str) -> str:
 
 
 PATTERN_NEGOZIO = [
-    (_radice(t), f"lessico da negozio vietato: «{t}»") for t in NEGOZIO
+    (_radice(t), f"lessico da negozio vietato: «{t}»") for t in NEGOZIO + FORME_FLESSE
 ]
+
+_NEGAZIONI_RE = [_re.compile(p, _re.IGNORECASE) for p in NEGAZIONI_AMMESSE]
+
+
+def nega_il_canale(testo: str) -> bool:
+    """La frase NEGA il canale invece di proporlo?
+
+    «Non siamo in vendita online, né Amazon né e-commerce nostro» è testo
+    approvato: è la leva di SHEis, non la violazione. Un filtro che lo
+    blocca viene disattivato da chi lo usa."""
+    return any(p.search(testo) for p in _NEGAZIONI_RE)
+
+
+def viola_firewall(testo: str):
+    """(True, motivo) se il testo evoca il marchio protetto, in qualunque
+    grafia o parafrasi. È la regola che il cliente ha dichiarato non
+    negoziabile: qui non si fanno eccezioni."""
+    for f in FIREWALL_PATTERN:
+        m = _re.search(f["pattern"], testo, _re.IGNORECASE)
+        if m:
+            return True, f'{f["cosa"]} → «{m.group(0)[:60]}»'
+    return False, ""
 
 _ECCEZIONI_RE = _re.compile(
     r"\b(" + "|".join(_re.escape(e) for e in ECCEZIONI_RADICE) + r")\b", _re.IGNORECASE
