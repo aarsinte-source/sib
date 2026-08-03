@@ -274,10 +274,14 @@ async function main() {
   if (sforato) {
     warn(
       `I 3 blueprint TUTTI INSIEME costano ${totMese.toFixed(2)} EUR/mese, sopra il tetto dichiarato di ` +
-      `${(CONFIG_FINTO.monthly_budget_cap_eur ?? 1000).toFixed(2)} EUR/mese. "node launch.mjs" (dry-run o --live) SENZA ` +
-      `--only calcola questo stesso totale e si rifiuterebbe di partire, anche solo per mostrare l'anteprima. ` +
-      `Non e' un blocco dei singoli blueprint (ognuno passa da solo, vedi sopra): lancia sempre con ` +
-      `--only <blueprint-id>, uno alla volta, nella sequenza gia' decisa nel README (A e C nel mese 1, B nel mese 2).`
+      `${(CONFIG_FINTO.monthly_budget_cap_eur ?? 1000).toFixed(2)} EUR/mese — di ` +
+      `${(totMese - (CONFIG_FINTO.monthly_budget_cap_eur ?? 1000)).toFixed(2)} EUR. ` +
+      `Nessun singolo blueprint sfora (ognuno passa da solo, vedi sopra): sfora solo la loro somma. ` +
+      `Dal 3/8 "node launch.mjs" in ANTEPRIMA parte comunque e avvisa — un freno che impedisce di guardare ` +
+      `non protegge niente. In "--live" invece BLOCCA, e non si discute. ` +
+      `Il caso pratico non lo sfora: si lancia con --only <blueprint-id> nella sequenza gia' decisa ` +
+      `(A e C nel mese 1, B nel mese 2), e con --only il conteggio guarda solo cio' che lanci davvero. ` +
+      `Se un giorno servisse accenderli tutti e tre, il tetto va alzato da Mauro: non si aggira da qui.`
     );
     tuttoOk = false;
   }

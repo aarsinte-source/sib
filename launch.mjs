@@ -123,8 +123,28 @@ async function main() {
   // Riepilogo unico: tutto cio' che blocca, in un colpo solo.
   const blocchi = [];
   if (bloccanti) blocchi.push(`${bloccanti} ${bloccanti === 1 ? 'blocco' : 'blocchi'} di validazione blueprint`);
-  if (sforato) blocchi.push('budget mensile oltre il tetto dichiarato dal cliente');
+
+  // ⚠️ Il tetto di spesa blocca in LIVE, AVVISA in anteprima. Misurato il 3/8:
+  // i tre blueprint insieme fanno 1.003,20 EUR/mese contro un tetto di 1.000,
+  // quindi `node launch.mjs` nudo si rifiutava di partire — anche solo per
+  // MOSTRARE l'anteprima, che non spende un centesimo.
+  //
+  // Un freno che impedisce di GUARDARE non protegge niente: spinge chi lo
+  // incontra ad aggirarlo, e a quel punto lo aggira anche quando conta. Il
+  // freno vero e' sull'azione che costa: in `--live` resta duro e non si
+  // discute. In anteprima diventa un avviso che dice quanto si sfora e come.
+  //
+  // Il tetto NON si alza da qui: e' un numero del cliente. Ma il caso pratico
+  // non lo sfora, perche' le campagne si lanciano a fasi con --only (A+C il
+  // primo mese, B il secondo) — e con --only il conteggio vede solo cio' che
+  // stai davvero lanciando, non tutti i blueprint che esistono su disco.
+  if (sforato && live) blocchi.push('budget mensile oltre il tetto dichiarato dal cliente');
   if (preflightFallito) blocchi.push('preflight accessi fallito');
+
+  if (sforato && !live) {
+    warn('budget oltre il tetto: in anteprima e\' solo un avviso, in --live blocca');
+    console.log(`  ${C.dim}Con --only <blueprint> il conteggio guarda solo quello che lanci davvero.${C.reset}`);
+  }
 
   if (blocchi.length) {
     title('NON SI PARTE');
