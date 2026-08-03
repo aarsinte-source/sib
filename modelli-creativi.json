@@ -1,0 +1,100 @@
+{
+  "_meta": {
+    "cosa": "Quale modello Higgsfield usare per quale lavoro creativo. FONTE UNICA: lo Studio e i worker la leggono, non la ricopiano.",
+    "perche": "Fino al 2026-08-03 il modello era scritto a mano dentro il codice: gpt_image_2, sempre, per qualunque cosa. Costa 7 crediti contro i 2 di Nano Banana Pro, si blocca per minuti interi (già misurato su un altro cliente) e non è il migliore in nessuna delle due categorie che servono qui. Un modello scelto una volta e mai più discusso è una decisione che invecchia in silenzio.",
+    "misurato_il": "2026-08-03",
+    "come_e_stato_misurato": "I costi in crediti vengono da `higgsfield generate cost <modello>` eseguito davvero su questo account, non da un listino. I parametri ammessi da `higgsfield model get <modello>`.",
+    "quando_va_rivisto": "Higgsfield aggiunge modelli di continuo (92 il 2026-08-03). Vale la pena rimisurare quando esce un modello nuovo di punta, o se un costo cambia: `python3 ~/alkemia-sheis-backend/misura_modelli.py`."
+  },
+  "credito_eur": 0.033,
+  "_credito_nota": "1 credito = €0,033 misurato. ⚠️ Oltre ai crediti esiste un TETTO GIORNALIERO: si può avere saldo e vedersi rifiutare la generazione lo stesso. Il gate di costo lo riconosce e lo dichiara invece di ritentare all'infinito.",
+  "lavori": {
+    "grafica": {
+      "descrizione": "Locandine, caroselli, inserzioni statiche, infografiche — tutto ciò che ha del TESTO dentro l'immagine.",
+      "modello": "nano_banana_2",
+      "nome_umano": "Nano Banana Pro",
+      "crediti": 2,
+      "perche": "È il migliore sul testo dentro l'immagine, che è il punto debole di quasi tutti i generatori: un carosello con la parola sbagliata non si pubblica. In più ha la fedeltà geometrica più alta misurata su prodotto (IoU 0,982 sul lavoro Mc&Co), quindi un flacone non si deforma.",
+      "parametri": {
+        "resolution": "2k",
+        "aspect_ratio": "4:5"
+      }
+    },
+    "grafica-bozza": {
+      "descrizione": "Passate esplorative: molte varianti per capire quale direzione tenere, prima di produrre quella buona.",
+      "modello": "seedream_v5_lite",
+      "nome_umano": "Seedream 5.0 Lite",
+      "crediti": 1,
+      "perche": "Metà del costo. Su una batteria di dodici tentativi la differenza è €0,40 contro €0,79: sembra poco, ma è la differenza fra esplorare e razionare. La resa finale si rifà col modello buono.",
+      "parametri": {
+        "aspect_ratio": "4:5"
+      }
+    },
+    "foto-prodotto": {
+      "descrizione": "Packshot, prodotto in scena, still life. Il prodotto deve restare SE STESSO.",
+      "modello": "nano_banana_2",
+      "nome_umano": "Nano Banana Pro",
+      "crediti": 2,
+      "perche": "Stessa ragione della grafica, ma qui la fedeltà è tutto: un tubo di colore ridisegnato dal generatore non è più il prodotto del cliente. Quando c'è un render vero, va passato come immagine di riferimento invece di descriverlo a parole.",
+      "parametri": {
+        "resolution": "2k"
+      }
+    },
+    "ugc-video": {
+      "descrizione": "Video UGC con una persona che parla o agisce in una situazione reale — il format che per SHEis ha già funzionato (caso Lazzari: 8 clienti in 5 mesi).",
+      "modello": "seedance_2_0",
+      "nome_umano": "Seedance 2.0",
+      "crediti": 22,
+      "perche": "È il migliore sulle scene con persone e genera l'audio insieme al video, quindi un parlato non va montato dopo. Costa quanto undici grafiche: è il lavoro più caro del catalogo e va deciso, non fatto per abitudine.",
+      "parametri": {
+        "duration": 5,
+        "generate_audio": true,
+        "bitrate_mode": "standard"
+      },
+      "attenzione": "⚠️ Misurato su un altro lavoro: a 4K e 10 secondi va in timeout e il costo resta a carico. Restare su durate brevi e risoluzione standard."
+    },
+    "ugc-video-bozza": {
+      "descrizione": "La stessa scena, per capire se l'idea regge prima di spendere il triplo.",
+      "modello": "seedance_2_0_mini",
+      "nome_umano": "Seedance 2.0 Mini",
+      "crediti": 12,
+      "perche": "Quasi la metà, stessa impostazione di scena. Serve a scartare le idee sbagliate a basso costo.",
+      "parametri": {
+        "duration": 5,
+        "generate_audio": true
+      }
+    },
+    "video-breve": {
+      "descrizione": "Movimento semplice su un prodotto o una grafica: nessuno che parla, nessuna scena complessa.",
+      "modello": "seedance1_5",
+      "nome_umano": "Seedance 1.5 Pro",
+      "crediti": 4,
+      "perche": "Un quinto del costo di Seedance 2.0. Per animare un packshot non serve un modello che sa recitare.",
+      "parametri": {
+        "duration": 5
+      }
+    }
+  },
+  "formato_per_canale": {
+    "_perche": "Il formato non è una preferenza estetica: è il posto dove il contenuto verrà visto. Una grafica quadrata dentro una storia lascia due bande vuote, e nessuno le guarda.",
+    "instagram-feed": "4:5",
+    "instagram-storia": "9:16",
+    "instagram-reel": "9:16",
+    "facebook-feed": "1:1",
+    "tiktok": "9:16",
+    "linkedin": "1:1",
+    "sito": "16:9"
+  },
+  "gate_costo": {
+    "soglia_eur_default": 2.0,
+    "_perche": "Nessuna generazione parte senza dichiarare quanto costa. La soglia non è un divieto: sopra quella cifra serve una conferma esplicita, perché è lì che una passata distratta smette di essere trascurabile.",
+    "marcatori_tetto_giornaliero": [
+      "daily limit",
+      "daily cap",
+      "rate limit",
+      "limite giornaliero",
+      "too many requests"
+    ]
+  },
+  "_attenzione_aspect_ratio": "⚠️ MAI passare aspect_ratio=«auto» a Higgsfield. È nell'elenco dei valori ammessi e il preventivo lo accetta, ma la generazione vera risponde HTTP 500 in un secondo — misurato il 2026-08-03 su nano_banana_2. Ogni lavoro deve avere un formato concreto; il canale, quando c'è, ha la precedenza su questo default."
+}
