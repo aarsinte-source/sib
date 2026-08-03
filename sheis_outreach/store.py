@@ -105,7 +105,7 @@ CREATE TABLE IF NOT EXISTS candidates (
     country          TEXT,
     lang             TEXT DEFAULT 'it',
     competitor_brand TEXT,                  -- marchio concorrente rilevato in bio (lista validata Mauro)
-    tipo             TEXT,                  -- salone|distributore|non_pertinente|incerto
+    tipo             TEXT,                  -- salone|distributore|non-pertinente|incerto
     score            INTEGER,
     motivo_score     TEXT,                  -- spiegazione ispezionabile: perché questo tipo/punteggio
     hook             TEXT,                  -- aggancio REALE o vuoto (mai inventato)

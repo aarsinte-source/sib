@@ -49,7 +49,7 @@ from . import config, store
 
 API_BASE = "https://api.scrapecreators.com"
 
-TIPI = ("salone", "distributore", "non_pertinente", "incerto")
+TIPI = ("salone", "distributore", "non-pertinente", "incerto")
 
 # Hashtag italiani esatti per i SALONI — verificati funzionanti.
 HASHTAGS_IT = ["parrucchieri", "saloneparrucchiere", "hairstylistitalia", "parrucchiereitaliano"]
@@ -359,7 +359,7 @@ def classify_tipo(profile: dict, username: str) -> tuple[str, int, int, list[str
     hair_context = any(w in low or w in cat for w in HAIR_CONTEXT_WORDS)
 
     if salon_score == 0 and dist_score == 0:
-        tipo = "incerto" if hair_context else "non_pertinente"
+        tipo = "incerto" if hair_context else "non-pertinente"
         motivi.append("nessun segnale chiaro di salone o distributore"
                        + (" ma contesto hair/beauty presente" if hair_context else ""))
     elif salon_score >= 3 and salon_score >= dist_score * 1.3:
@@ -377,7 +377,7 @@ def classify_tipo(profile: dict, username: str) -> tuple[str, int, int, list[str
 def score_candidate(tipo: str, salon_score: int, dist_score: int, profile: dict,
                      hook: str, hook_fonte: str) -> tuple[int, list[str]]:
     """0-100, ogni contributo tracciato in chiaro (mai un numero senza motivo)."""
-    if tipo == "non_pertinente":
+    if tipo == "non-pertinente":
         return 0, ["0: non pertinente al settore hair-care, non si assegna punteggio"]
 
     base = min(max(salon_score, dist_score) * 5, 40)
