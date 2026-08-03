@@ -202,6 +202,12 @@ Le due righe rosse non sono difetti del codice: sono decisioni che spettano al c
 
 - **Copione approvato** (contenuto dei messaggi):
   `scalers-plus/clienti/sheis-beauty-aiconsult/copy/OUTREACH-CONVERSAZIONI_linkedin-instagram_2026-07-20.md`
+  — questo è il file letto da `config.PLAYBOOK`. La cartella `playbook/` in questo repo è vuota e
+  **non è il file che il codice legge**: non spostarci il copione, altrimenti `config.PLAYBOOK` non
+  lo trova più (a meno di settare `SHEIS_PLAYBOOK` esplicitamente).
+- **Metodo/tono dei messaggi**: `scalers-plus/.claude/skills/sheis-sales-method/SKILL.md` — il
+  metodo di vendita insegnato alla rete SHEis, da cui il copione sopra eredita la forma (domanda
+  prima dell'affermazione, problema prima del prodotto) dal 2026-08-03.
 - **Correzioni di Mauro** (sovrascrivono il copione):
   `~/alkemia-sheis-outreach-demo/data/VOICE-LEARNED.md`
 - **Guardrail di brand**: `scalers-plus/.claude/skills/sheis-brand-core/SKILL.md`

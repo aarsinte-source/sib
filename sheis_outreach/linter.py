@@ -7,6 +7,8 @@ Un BLOCK non è un warning: è uno stop.
 import re
 from dataclasses import dataclass, field
 
+from .vincoli_brand import PATTERN_NEGOZIO, negozio_eccezione, numero_documentato
+
 BLOCK, WARN = "BLOCK", "WARN"
 
 
@@ -47,6 +49,12 @@ class LintResult:
 PRICE_PATTERNS = [
     (r"[€$£]\s?\d", "simbolo di valuta seguito da cifra"),
     (r"\b\d+[.,]?\d*\s?(euro|eur|dollari|usd)\b", "importo esplicito"),
+    # ⚠️ Questa riga aveva un difetto misurato il 3/8: bloccava OGNI percentuale,
+    # incluso il «99% di origine naturale» che il file di marca dichiara essere
+    # il dato vero — e che poche righe più sotto questo stesso file cita come
+    # tale. Un messaggio corretto e approvato veniva rifiutato dal cancello.
+    # Ora la percentuale è vietata *salvo* che sia una di quelle documentate nel
+    # contesto giusto: vedi NUMERI_DOCUMENTATI (§_percentuale_documentata).
     (r"\b\d{1,3}\s?%", "percentuale (possibile margine o sconto)"),
     (r"\b(sconto|sconti|scontato|scontata|scontati|descuento|discount|"
      r"listino|listini|price list|tarifa|pricing|"
@@ -70,6 +78,35 @@ PRICE_PATTERNS = [
      r"catorce|quince|dieciséis|diecisiete|dieciocho|diecinueve|veinte|treinta|"
      r"cuarenta|cincuenta|sesenta|setenta|ochenta|noventa|cien|mil)\s+euros?\b",
      "importo scritto per esteso (ES)"),
+    # ⚠️ Divergenza misurata il 3/8 contro il filtro gemello dei contenuti:
+    # «duecento euro» passava di qui e veniva bloccato di là. Le tre righe sopra
+    # inseguono i numerali scritti per esteso, ma «duecento» non ha un confine
+    # di parola davanti a «cento» e sfuggiva. Inseguire ogni numerale italiano è
+    # una partita persa: si blocca la parola-valuta NUDA. SHEis non ha mai un
+    # motivo legittimo di nominare «euro» in un messaggio a freddo — non vende
+    # online e non dà prezzi fuori dalla call (brand-core §7).
+    (r"\b(euro|euros|eur|dollari|dollar|dollars|sterline|pound|pounds|"
+     r"centesimi|cents|céntimos)\b",
+     "valuta nominata, anche in lettere e senza cifra accanto"),
+]
+
+# Claim quantificati: un numero è dimostrabile solo se il cliente l'ha
+# documentato. Regola presa dal filtro gemello dei contenuti, dove esisteva già
+# — qui mancava del tutto, ed era la seconda divergenza misurata: «Siamo leader
+# da 47 anni» passava da questo cancello e veniva fermato dall'altro.
+# La whitelist è la stessa per entrambi (NUMERI_DOCUMENTATI, dalla fonte).
+CLAIM_QUANTIFICATO = [
+    (r"\b\d+\s*(minuti|minuto|ore|ora|minutes|minutos)\b",
+     "durata quantificata non documentata"),
+    (r"\b\d+\s*(giorni|giorno|mesi|mese|anni|anno|days|years|años)\b",
+     "quantità temporale non documentata (anzianità, garanzia, tempi di consegna)"),
+    (r"\b\d+\s*(client[ie]|salon[ie]|distributor[ie]|paesi|countries)\b",
+     "quantità commerciale non documentata"),
+    # ⚠️ Buco misurato il 3/8: «120 nuance» passava da tutti e quattro i filtri.
+    # La cartella SHEis Color ne ha 83 — è l'unico dato di prodotto che chiunque
+    # verifica in due secondi. Non era una divergenza: era un buco condiviso.
+    (r"\b\d+\s*(nuance|nuances|tonalit\w*|tonos|matices|shades)\b",
+     "ampiezza di gamma non documentata (la cartella SHEis Color ha 83 nuance)"),
 ]
 # Menzione nuda del prezzo senza cifra: legittima quando RINVIA (copione §5),
 # sospetta altrove → passa, ma segnalata per revisione umana.
@@ -79,31 +116,13 @@ PRICE_SOFT = [
 ]
 
 # 2) Mai shop/negozio/carrello/acquista/e-commerce → si dice "portale ordini"/"area riservata".
-# Ampliato in revisione (3/8), allineato a ~/alkemia-sheis-workers/lib/linter.py
-# (linter gemello sui contenuti social, stessa fonte BRAND-IDENTITY §lessico —
-# "non riscrivere da zero", si allinea alle stesse regole): mancava tutta la
-# copertura ES/FR/DE/PL/PT/AR. Trovato in revisione: "Visite nuestra tienda
-# online" passava indisturbato. Le forme polacche declinano (koszyk/koszyka/
-# koszyku): match per RADICE (\w*), non parola intera — vedi
-# lessico._regola_di_confronto in BRAND-IDENTITY.
-SHOP_PATTERNS = [
-    (r"\b(shop|negozio online|negozio on-line|carrello|carrito|cart|"
-     r"e-?commerce|acquista ora|compra ora|comprar ahora|buy now|"
-     r"checkout|aggiungi al carrello)\b", "lessico e-commerce vietato"),
-    (r"\btienda\b", "tienda (ES) — lessico e-commerce vietato"),
-    (r"\bcomprar\b", "comprar (ES/PT) — lessico e-commerce vietato"),
-    (r"\bcesta\b", "cesta (ES) — lessico e-commerce vietato"),
-    (r"\bpanier\b", "panier (FR) — lessico e-commerce vietato"),
-    (r"\bacheter\b", "acheter (FR) — lessico e-commerce vietato"),
-    (r"\bwarenkorb\b", "Warenkorb (DE) — lessico e-commerce vietato"),
-    (r"\bkaufen\b", "kaufen (DE) — lessico e-commerce vietato"),
-    (r"\bkoszyk\w*\b", "koszyk (PL), incluse le forme declinate — lessico e-commerce vietato"),
-    (r"\bsklep\b", "sklep (PL) — lessico e-commerce vietato"),
-    (r"\bloja\b", "loja (PT) — lessico e-commerce vietato"),
-    (r"\bcarrinho\b", "carrinho (PT) — lessico e-commerce vietato"),
-    (r"متجر", "متجر — shop (AR)"),
-    (r"عربة\s*تسوق|سلة\s*(ال)?تسوق", "carrello (AR)"),
-]
+#
+# Questa lista NON si scrive più qui. Fino al 3/8 era ricopiata a mano da
+# BRAND-IDENTITY, e la copia era rimasta indietro: quando la fonte è passata da
+# 15 a 41 termini, questo file non se n'è accorto. Ora arriva generata — se la
+# fonte cambia, `sincronizza_brand.py --verifica` fallisce invece di lasciare
+# due filtri dello stesso sistema in disaccordo sullo stesso testo.
+SHOP_PATTERNS = PATTERN_NEGOZIO
 # Eccezione: il copione USA legittimamente "non siamo in vendita online" / "no Amazon".
 # Quelle frasi NEGANO l'e-commerce e sono approvate: whitelist esplicita.
 SHOP_ALLOWED = [
@@ -141,8 +160,12 @@ M29_PATTERNS = [
 
 # 4) Claim non documentati (senza CPNP/PIF non si dicono).
 CLAIM_PATTERNS = [
-    (r"\b(clinicamente (provato|testato)|clinically proven|dermatologicamente testato"
-     r"|scientificamente provato)\b", "claim clinico non documentato"),
+    # ⚠️ Accordo di genere: «clinicamente provata» (formula, femminile) sfuggiva
+    # perché la riga cercava solo il maschile singolare. Misurato il 3/8.
+    (r"\bclinicamente\s+(provat|testat|dimostrat)\w*|\bclinically proven\b|"
+     r"\bdermatologicamente\s+(provat|dimostrat)\w*|"
+     r"\bscientificamente\s+(provat|dimostrat)\w*|\bcl[íi]nicamente\s+(probad|test)\w*",
+     "claim clinico non documentato"),
     (r"\b(risultati garantiti|garantiamo|garantito al|guaranteed results|"
      r"resultados garantizados)\b", "garanzia di risultato"),
     (r"\b(il migliore (del mercato|in assoluto)|numero 1 (in|del)|the best on the market|"
@@ -197,8 +220,38 @@ def _find(text: str, patterns, level, rule):
     return out
 
 
+def _find_prezzi(text: str):
+    """Come `_find` sui pattern di prezzo, ma lascia passare i numeri che il
+    cliente ha documentato.
+
+    Il difetto che questa funzione chiude (misurato il 3/8): la regola sulle
+    percentuali bloccava anche «99% di origine naturale», che è il dato reale
+    dichiarato dal cliente e scritto nel file di marca. Il filtro rifiutava un
+    messaggio corretto — e un cancello che blocca il lecito viene disattivato da
+    chi lo usa, il che è molto peggio di una regola un po' larga.
+
+    La distinzione la fa il CONTESTO, non il numero: «99% di origine naturale»
+    passa, «99% di sconto» resta bloccato.
+    """
+    out = []
+    for regola, patterns in (("prezzi/margini", PRICE_PATTERNS),
+                             ("claim-quantificato", CLAIM_QUANTIFICATO)):
+        for pat, detail in patterns:
+            m = re.search(pat, text, re.IGNORECASE)
+            if not m:
+                continue
+            if numero_documentato(text, m.start(), m.end()):
+                continue
+            out.append(Violation(BLOCK, regola, detail, m.group(0)))
+    return out
+
+
 def _shop_allowed(text: str, match: str) -> bool:
-    """La menzione è dentro una frase che NEGA l'online? Allora è approvata."""
+    """La menzione è approvata? Due modi: la parola è innocente e condivide solo
+    la radice con un termine vietato («ordinario» ≠ «ordina»), oppure è dentro
+    una frase che NEGA l'online — che è la leva di SHEis, non la violazione."""
+    if negozio_eccezione(match):
+        return True
     low = text.lower()
     idx = low.find(match.lower())
     window = low[max(0, idx - 60): idx + len(match) + 20]
@@ -230,7 +283,7 @@ def _script_violation(text: str):
 
 def lint(text: str, channel: str = "linkedin", touch: str = "touch2") -> LintResult:
     v = []
-    v += _find(text, PRICE_PATTERNS, BLOCK, "prezzi/margini")
+    v += _find_prezzi(text)
     v += _find(text, PRICE_SOFT, WARN, "prezzo-nominato")
     v += _find(text, M29_PATTERNS, BLOCK, "metodo-29")
     compact = _compact_digits(text)
