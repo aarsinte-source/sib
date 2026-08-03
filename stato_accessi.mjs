@@ -20,6 +20,7 @@ import { dirname, join } from 'node:path';
 import { C, ok, warn, fail, info, title } from './lib/ui.mjs';
 import { preflight, BloccoPreflight } from './lib/preflight.mjs';
 import { CHECKLIST, OBBLIGATORIE } from './lib/checklist-accessi.mjs';
+import { makeApi } from './lib/meta-api.mjs';
 import { dbAttivo } from './lib/campagne-store.mjs';
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
@@ -32,6 +33,62 @@ async function leggiConfig() {
     return JSON.parse(await readFile(CONFIG_PATH, 'utf8'));
   } catch (e) {
     return { _erroreParsing: e.message };
+  }
+}
+
+/**
+ * Cosa riesce a vedere il token che abbiamo, senza sapere ancora quale sia
+ * l'account di SHEis. Serve a distinguere due cose che si somigliano e non lo
+ * sono: «non ho accesso» e «non so ancora dove guardare».
+ *
+ * Non decide niente e non lancia niente: elenca. Se fra gli account visibili
+ * ce n'e' uno di SHEis, si scrive il suo id in config.local.json e il rapporto
+ * passa alla verifica vera.
+ */
+async function mostraCosaVedeIlToken(config) {
+  const api = makeApi(config);
+  try {
+    const me = await api.get('me', { fields: 'id,name' });
+    ok(`Token valido — utente/sistema «${me.name ?? me.id}».`);
+  } catch (e) {
+    fail(`Token NON valido: ${String(e.message ?? e).slice(0, 160)}`);
+    info('Finche\' il token non risponde, tutto il resto e\' indistinguibile da un problema di permessi.');
+    return;
+  }
+
+  try {
+    const r = await api.get('me/adaccounts', {
+      fields: 'account_id,name,currency,account_status',
+      limit: 100,
+    });
+    const conti = r?.data ?? [];
+    if (conti.length === 0) {
+      warn('Il token non vede nessun account pubblicitario: serve che SHEis dia accesso al proprio.');
+      return;
+    }
+    const eur = conti.filter((c) => c.currency === 'EUR');
+    info(`Il token vede ${conti.length} account pubblicitari, ${eur.length} in EUR.`);
+    const sospetti = conti.filter((c) => /sheis|babilon|younic/i.test(c.name ?? ''));
+    if (sospetti.length > 0) {
+      ok(`Possibile account SHEis gia' visibile: ${sospetti.map((c) => `${c.name} (act_${c.account_id}, ${c.currency})`).join(' · ')}`);
+      info('Se e\' davvero suo, scrivi quell\'id in config.local.json → ad_account_id e rilancia.');
+    } else {
+      warn('Nessuno degli account visibili ha SHEis/BABILON/YOUNIC nel nome.');
+      info('Gli account visibili appartengono ad altri clienti: la spesa di SHEis non puo\' partire da li\'. Serve il suo.');
+    }
+  } catch (e) {
+    warn(`Elenco account non leggibile: ${String(e.message ?? e).slice(0, 140)}`);
+  }
+
+  try {
+    const p = await api.get('me/accounts', { fields: 'id,name', limit: 100 });
+    const pagine = p?.data ?? [];
+    const sheis = pagine.filter((x) => /sheis|babilon|younic/i.test(x.name ?? ''));
+    if (sheis.length > 0) ok(`Pagina Facebook SHEis gia' raggiungibile: ${sheis.map((x) => x.name).join(' · ')}`);
+    else info(`Il token vede ${pagine.length} Pagine Facebook, nessuna di SHEis.`);
+  } catch {
+    // Le Pagine possono non essere leggibili con un token di sistema: non e' un
+    // guasto, e non vale la pena farlo sembrare tale.
   }
 }
 
@@ -52,10 +109,22 @@ async function main() {
   } else if (config._erroreParsing) {
     title('CONFIGURAZIONE');
     fail(`config.local.json presente ma non e' JSON valido: ${config._erroreParsing}`);
-  } else if (!config.access_token || !config.ad_account_id) {
+  } else if (!config.access_token) {
     title('CONFIGURAZIONE');
-    fail('config.local.json presente ma incompleto (manca access_token o ad_account_id).');
+    fail('config.local.json presente ma senza access_token.');
   } else {
+    // ⚠️ Prima, token e account mancanti finivano nello stesso ramo e il
+    // rapporto smetteva di interrogare l'API: dichiarava "non verificabile"
+    // anche cio' che il token sa gia' rispondere. Un token vivo senza account
+    // non e' assenza di informazioni — e' meta' delle risposte, e vale la pena
+    // chiederle: quali account vede, in che valuta, quali Pagine. Cosi'
+    // l'elenco di domande al cliente si accorcia invece di restare identico a
+    // quello del primo giorno.
+    if (!config.ad_account_id) {
+      title('CONFIGURAZIONE');
+      warn('Token presente, account pubblicitario SHEis non ancora dichiarato.');
+      await mostraCosaVedeIlToken(config);
+    }
     try {
       await preflight(config, blueprints);
       preflightOk = true;
