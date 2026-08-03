@@ -145,6 +145,13 @@ def costruisci_piano(piattaforme: list[str], tipo: str = "entrambi",
             if not c:
                 saltati.append(f"{chiave}: nessuna fonte copre questa combinazione")
                 continue
+            # Una fonte MISURATA non funzionante non entra nel piano. Entrarci
+            # significherebbe promettere un dato che non arriverà — e chi legge
+            # il risultato vuoto ne trae una conclusione di mercato da un
+            # guasto. È già successo con la libreria inserzioni TikTok.
+            if c.get("disponibile") is False:
+                saltati.append(f"{chiave}: {c.get('attenzione') or 'fonte non disponibile'}")
+                continue
             gia = next((x for x in passi if x.capacita == risolta), None)
             if gia:
                 # Stessa interrogazione chiesta da due piattaforme: si fa una
