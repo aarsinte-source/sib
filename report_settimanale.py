@@ -37,7 +37,7 @@ from statistics import median
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from lib import canali, supabase  # noqa: E402
+from lib import canali, finestra, supabase  # noqa: E402
 
 LIVE = os.environ.get("LIVE") == "1"
 QUI = Path(__file__).resolve().parent
@@ -302,6 +302,37 @@ def _sicuro(nome: str, fn, *args) -> dict:
         }
 
 
+def calcola_canali_spenti(organico: dict, pubblicitario: dict, outreach: dict) -> list[str]:
+    """⚠️ REGRESSIONE ⑦ (revisione avversariale 2026-08-03): questa lista
+    tracciava SOLO il canale pubblicitario. Organico e outreach hanno il
+    proprio 'disponibile: False' ma non comparivano mai qui — il dato
+    strutturato mentiva per omissione su due canali su tre. Ora tutti e tre.
+    """
+    return [
+        nome for nome, attivo in (
+            ("organico", organico["disponibile"]),
+            ("pubblicitario", pubblicitario["attivo"]),
+            ("outreach", outreach["disponibile"]),
+        ) if not attivo
+    ]
+
+
+def decidi_invio_reale(live: bool) -> tuple[bool, str]:
+    """(dry, motivo). ⚠️ REGRESSIONE ⑦ (continua): il modulo finestra.py
+    dichiara nel proprio docstring che la finestra 08:00-18:30 Europe/Rome
+    vale anche per le email/Telegram del report, ma prima nessuno la
+    chiamava qui — chi rilanciava il report a mano per una prova mandava
+    fuori orario senza saperlo. Con LIVE=1 ma fuori finestra, l'invio resta
+    in simulazione (il report è comunque calcolato e stampato).
+    """
+    if not live:
+        return True, ""
+    ok_finestra, msg_finestra = finestra.dentro_finestra()
+    if not ok_finestra:
+        return True, msg_finestra
+    return False, ""
+
+
 def main() -> int:
     print(f"=== report_settimanale.py — {'LIVE' if LIVE else 'SIMULAZIONE (default)'} ===")
     periodo_da, periodo_a = periodo_settimana_scorsa()
@@ -322,21 +353,27 @@ def main() -> int:
 
     print("\n" + corpo_email + "\n")
 
+    canali_spenti = calcola_canali_spenti(organico, pubblicitario, outreach)
+
     pronto, _ = db.schema_pronto(["sheis_report"])
     if pronto:
         db.upsert("sheis_report", {
             "tipo": "settimanale", "periodo_da": periodo_da.isoformat(), "periodo_a": periodo_a.isoformat(),
             "organico": organico, "pubblicitario": pubblicitario, "outreach": outreach,
-            "canali_spenti": [n for n, s in (("pubblicitario", pubblicitario["attivo"]),) if not s],
+            "canali_spenti": canali_spenti,
             "markdown": corpo_email,
         }, conflitto="tipo,periodo_da")
         print("✓ report salvato in sheis_report")
     else:
         print("⚠️  sheis_report non esiste ancora: report generato ma non salvato nel DB (solo consegnato)")
 
+    dry_effettivo, motivo_finestra = decidi_invio_reale(LIVE)
+    if motivo_finestra:
+        print(f"⏳ {motivo_finestra} — LIVE richiesto ma fuori finestra: l'invio resta in simulazione")
+
     esiti = canali.consegna_report(
         f"Report settimanale SHEis {periodo_da:%d/%m}-{periodo_a:%d/%m}",
-        corpo_email, corpo_telegram, dry=not LIVE,
+        corpo_email, corpo_telegram, dry=dry_effettivo,
     )
     for canale_nome, e in esiti.items():
         stato = "✓" if e["ok"] else "✗"
