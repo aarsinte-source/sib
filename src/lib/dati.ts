@@ -2,6 +2,7 @@ import "server-only";
 import { sbFetch, SchemaNotInitializedError } from "@/lib/supabase";
 import type { Brand, Canale, Formato, Lingua, Pubblico } from "@/lib/brand";
 import type { Ruolo } from "@/lib/auth";
+import type { Blocco } from "@/lib/articoli";
 
 /**
  * L'UNICO punto che parla col database (SPEC.md §Architettura). Ogni pagina e
@@ -145,12 +146,18 @@ export type Articolo = {
   lingua: string;
   titolo: string;
   sommario: string | null;
-  blocchi: unknown[];
+  blocchi: Blocco[];
   copertina_url: string | null;
-  seo: unknown;
+  /** {src, alt} — stessa forma dei file .json di ~/alkemia-sheis-web (migrazione 0004). */
+  copertina: { src: string; alt: string } | null;
+  categoria: string | null;
+  tag: string[] | null;
+  autore: string | null;
+  seo: { title?: string; description?: string } | null;
   stato: "bozza" | "in_revisione" | "pubblicato" | "archiviato";
   fonte_lingua: string | null;
   autore_id: string | null;
+  pubblicato_da: string | null;
   pubblicato_il: string | null;
   created_at: string;
   updated_at: string;
@@ -367,6 +374,11 @@ export async function listaVarianti(contenutoId: string): Promise<Variante[]> {
   });
 }
 
+export async function getVariante(id: string): Promise<Variante | null> {
+  const righe = await sbFetch<Variante[]>("sheis_varianti", { query: `select=*&id=eq.${id}&limit=1` });
+  return righe[0] ?? null;
+}
+
 export async function aggiornaVariante(id: string, patch: Partial<Variante>): Promise<Variante> {
   const [riga] = await sbFetch<Variante[]>("sheis_varianti", {
     method: "PATCH",
@@ -510,11 +522,25 @@ export async function listaArticoli(): Promise<Articolo[]> {
   return sbFetch<Articolo[]>("sheis_articoli", { query: "select=*&order=updated_at.desc" });
 }
 
+export async function getArticolo(id: string): Promise<Articolo | null> {
+  const righe = await sbFetch<Articolo[]>("sheis_articoli", { query: `select=*&id=eq.${id}&limit=1` });
+  return righe[0] ?? null;
+}
+
+/** Tutte le traduzioni esistenti dello stesso slug (per la vista editor: quali lingue mancano ancora). */
+export async function articoliPerSlug(slug: string): Promise<Articolo[]> {
+  return sbFetch<Articolo[]>("sheis_articoli", { query: `select=*&slug=eq.${encodeURIComponent(slug)}&order=lingua.asc` });
+}
+
 export async function creaArticolo(input: {
   slug: string;
   lingua: string;
+  fonteLingua: string;
   titolo: string;
   sommario?: string;
+  categoria?: string;
+  tag?: string[];
+  blocchi?: Blocco[];
   autoreId: string;
 }): Promise<Articolo> {
   const [riga] = await sbFetch<Articolo[]>("sheis_articoli", {
@@ -524,13 +550,57 @@ export async function creaArticolo(input: {
       {
         slug: input.slug,
         lingua: input.lingua,
+        fonte_lingua: input.fonteLingua,
         titolo: input.titolo,
         sommario: input.sommario ?? null,
-        blocchi: [],
+        categoria: input.categoria ?? null,
+        tag: input.tag ?? null,
+        blocchi: input.blocchi ?? [],
         stato: "bozza",
         autore_id: input.autoreId,
       },
     ],
+  });
+  return riga;
+}
+
+/**
+ * Modifica i campi di contenuto — SEMPRE disponibile a chi propone
+ * (dipendente incluso). Non tocca mai `stato`: quel campo passa solo da
+ * `pubblicaArticolo`, il gate riservato a marketing/mauro.
+ */
+export async function aggiornaArticolo(
+  id: string,
+  campi: Partial<
+    Pick<Articolo, "titolo" | "sommario" | "blocchi" | "copertina" | "categoria" | "tag" | "seo">
+  >,
+): Promise<Articolo> {
+  const [riga] = await sbFetch<Articolo[]>("sheis_articoli", {
+    method: "PATCH",
+    query: `id=eq.${id}`,
+    prefer: "return=representation",
+    body: campi,
+  });
+  return riga;
+}
+
+/** Il gate di pubblicazione: solo qui `stato` diventa 'pubblicato'. */
+export async function pubblicaArticolo(id: string, attoreId: string): Promise<Articolo> {
+  const [riga] = await sbFetch<Articolo[]>("sheis_articoli", {
+    method: "PATCH",
+    query: `id=eq.${id}`,
+    prefer: "return=representation",
+    body: { stato: "pubblicato", pubblicato_il: new Date().toISOString(), pubblicato_da: attoreId },
+  });
+  return riga;
+}
+
+export async function archiviaArticolo(id: string): Promise<Articolo> {
+  const [riga] = await sbFetch<Articolo[]>("sheis_articoli", {
+    method: "PATCH",
+    query: `id=eq.${id}`,
+    prefer: "return=representation",
+    body: { stato: "archiviato" },
   });
   return riga;
 }

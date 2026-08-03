@@ -26,8 +26,14 @@
     "cadenza_attuale_giorni": 14.4,
     "cadenza_giudizio": "Circa 2 post al mese. Troppo rada perché l'algoritmo consideri il profilo attivo.",
     "engagement_rate_mediano_pct": 0.26,
-    "engagement_benchmark_sano_pct": "1,0–3,0",
-    "engagement_giudizio": "Sotto di circa 4-10 volte il benchmark di categoria. Non è un problema di contenuto: è un problema di frequenza e di formato.",
+    "engagement_benchmark_misurato_sui_competitor": {
+      "vitalitys": 0.601, "insight_professional": 0.383, "kevin_murphy": 0.34,
+      "sheis": 0.26, "davines_italia": 0.133, "sebastian_globale": 0.124,
+      "framesi": 0.111, "alfaparf_globale": 0.058, "oribe": 0.058
+    },
+    "engagement_giudizio": "CORRETTO il 2026-08-03 dopo la misura sui competitor. Lo 0,26% NON è 'sotto il benchmark': è più alto di Davines Italia, Sebastian, Framesi, Alfaparf e Oribe. Vale la regola per cui più follower abbassano il tasso. Chi vede i contenuti di SHEis reagisce quanto reagisce il pubblico dei pari. Il problema non è la qualità del singolo post: è QUANTE PERSONE lo vedono.",
+    "like_su_views_reel_mediano_pct": 1.61,
+    "like_su_views_giudizio": "Dentro il range competitivo, non fuori: sopra Davines (1,28) e Vitality's (1,27), pari ad Alfaparf (1,97), Framesi (1,54) e Insight (1,74). Solo Kevin Murphy (3,14) è nettamente sopra. Il pubblico raggiunto è affine quanto quello dei concorrenti — ce n'è troppo poco.",
     "hashtag_usati": 0,
     "hashtag_giudizio": "Zero hashtag su 12 post. Per un profilo che vuole essere scoperto da saloni e distributori è la singola occasione persa più grande e più economica da correggere.",
     "efficacia_per_formato_misurata": {
@@ -45,8 +51,8 @@
     "like": 107,
     "commenti": 2,
     "like_su_views_pct": 0.06,
-    "perche_e_un_falso_positivo": "Ha raggiunto quasi 6 volte il numero di follower ma con un rapporto like/views di 0,06%, contro il 2,3–2,9% dei reel piccoli dello stesso profilo. Reach senza risonanza: il contenuto è arrivato a un pubblico non affine. Va letto come distribuzione anomala, non come modello di contenuto riuscito.",
-    "metrica_da_usare_invece": "like_su_views_pct — è il segnale di affinità del pubblico. Sopra il 2% il contenuto ha trovato le persone giuste; sotto lo 0,5% ha solo fatto numero.",
+    "perche_e_un_falso_positivo": "Ha raggiunto quasi 6 volte il numero di follower ma con un rapporto like/views di 0,06%, contro una MEDIANA di profilo dell'1,61%: ventisette volte peggio del normale di casa. Reach senza risonanza — il contenuto è arrivato a un pubblico non affine. Va letto come distribuzione anomala, non come modello di contenuto riuscito.",
+    "metrica_da_usare_invece": "like_su_views_pct, confrontato con la mediana del profilo (1,61%) e con quella dei concorrenti (1,27–3,14%). Sotto lo 0,5% il contenuto ha solo fatto numero; attorno o sopra al 2% ha trovato le persone giuste.",
     "riferimento_positivo_reale": "Reel Sun Babilon UV del 2026-04-10: 28.730 views con 0,76% like/view e 217 like — il miglior equilibrio fra portata e risonanza del profilo."
   },
 
@@ -104,7 +110,18 @@
     ],
     "vietato_assoluto": {
       "prezzi_e_cifre_commerciali": ["€", "euro", "prezzo", "listino", "sconto", "offerta", "promo", "saldo"],
-      "lessico_da_negozio": ["shop", "negozio", "carrello", "acquista", "compra", "ordina ora", "e-commerce", "checkout", "cart", "tienda", "panier", "Warenkorb", "koszyk", "loja", "متجر"],
+      "lessico_da_negozio": [
+        "shop", "negozio", "carrello", "acquista", "acquistare", "compra", "comprare",
+        "ordina ora", "ordina adesso", "e-commerce", "ecommerce", "checkout", "aggiungi al carrello",
+        "cart", "add to cart", "buy now", "purchase",
+        "tienda", "carrito", "cesta", "comprar", "añadir al carrito",
+        "panier", "acheter", "ajouter au panier",
+        "Warenkorb", "kaufen", "jetzt kaufen", "in den Warenkorb",
+        "koszyk", "sklep", "kup teraz", "dodaj do koszyka",
+        "loja", "carrinho", "comprar agora", "adicionar ao carrinho",
+        "متجر", "سلة", "عربة التسوق", "اشتر الآن"
+      ],
+      "_regola_di_confronto": "⚠️ Il confronto deve avvenire per RADICE, non per parola esatta. Misurato il 2026-08-03: «koszyka» (genitivo polacco di «koszyk») e «carrito» sfuggivano a un confronto esatto, e due linter dello stesso sistema davano verdetti diversi sullo stesso testo. Le lingue slave declinano, quelle romanze concordano: chi confronta parole intere blocca il caso da manuale e lascia passare quello reale. Va inoltre normalizzato lo spazio unicode e ignorata la differenza fra maiuscole e minuscole.",
       "firewall": ["Metodo 29", "Metodo29", "Method 29"],
       "motivo_firewall": "Regola non negoziabile del cliente: nessun collegamento pubblico fra SHEis e questo marchio. Vale in ogni lingua, in ogni parafrasi e anche nei metadati tecnici."
     },
@@ -125,7 +142,12 @@
     "mix_motivo": "Ribalta la pratica attuale, che privilegia il formato meno efficace secondo i loro stessi dati.",
     "cadenza_obiettivo_giorni": 3,
     "cadenza_motivo": "Da 2 post al mese a circa 10. È la leva più forte e non costa creatività aggiuntiva: il carosello si taglia dal materiale già esistente.",
-    "hashtag_per_post": { "min": 8, "max": 15, "nota": "Oggi zero. Vanno introdotti in italiano e inglese, misti fra generici di categoria e specifici di nicchia professionale." },
+    "hashtag_per_post": {
+      "min": 8, "max": 15,
+      "nota": "Oggi zero. Vanno introdotti in italiano e inglese, misti fra generici di categoria e specifici di nicchia professionale.",
+      "prova_misurata": "I due concorrenti che parlano italiano nel campione li usano su 12 post su 12: Davines Italia con mediana 5, Insight Professional con mediana 8,5. I brand che parlano soprattutto inglese ne usano pochi — quindi non è una pratica abbandonata dal settore, è viva fra i pari italiani. È la correzione più economica di tutte: costo di produzione zero, si applica in fase di pubblicazione."
+    },
+    "vincolo_organizzativo": "L'aumento di cadenza NON deve aumentare le ore di Leonardo (baseline 35-40 ore/mese, brand-core §11): ogni sistema deve ridurle. Il volume si ottiene con produzione in lotti dal materiale già esistente — un carosello si ricava da ciò che c'è — non con più lavoro manuale.",
     "cta_ammesse": ["Scopri la gamma su www.sheishair.com", "Trova il tuo salone", "Scrivici per diventare distributore"],
     "cta_vietate": ["Acquista", "Ordina", "Compra ora", "Aggiungi al carrello"],
     "numeri_ammessi": "Solo quelli documentati: 15 minuti di posa, 99% di origine naturale, tre fasi YOUNIC, senza ammoniaca. Ogni altro numero va marcato [DA CONFERMARE] e non esce.",

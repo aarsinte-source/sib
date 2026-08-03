@@ -179,6 +179,16 @@ async function main() {
   assert(!esitoPulito.bloccato, "un contenuto brand-safe NON viene bloccato");
   if (esitoPulito.bloccato) console.log("    →", JSON.stringify(esitoPulito.violazioni));
 
+  console.log("\n— linter: verifica indipendente della correzione radice/suffisso (team lead, 2026-08-03) —");
+  const koszykaEsito = linter.lintTesto("Aggiungi il prodotto al koszyka prima di uscire dal salone.");
+  assert(koszykaEsito.bloccato, '"koszyka" (genitivo polacco di "koszyk") viene bloccato dopo la correzione');
+  const carritoEsito = linter.lintTesto("El salón puede añadir el producto al carrito profesional.");
+  assert(carritoEsito.bloccato, '"carrito" (nuovo nell\'elenco) viene bloccato');
+  const cartellaEsito = linter.lintTesto("Sfoglia la cartella colore SHEis in salone con il tuo distributore.");
+  assert(!cartellaEsito.bloccato, '"cartella" NON viene bloccata da "cart" (falso positivo evitato, suffisso solo da 6 caratteri)');
+  const comprareEsito = linter.lintTesto("Il distributore può comprare la linea BABILON in blocco.");
+  assert(comprareEsito.bloccato, '"comprare" (forma estesa già in elenco) viene bloccato');
+
   console.log("\n— giro completo: piano → approva/rifiuta/modifica → registro —");
   const piano = await dati.creaPiano("senza ammoniaca");
   const [c1, c2, c3] = await dati.creaContenuti([

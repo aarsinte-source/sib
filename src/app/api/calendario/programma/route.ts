@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getContenuto, metteInCoda, scriviLog, bloccaPubblicazione } from "@/lib/dati";
+import { getContenuto, getVariante, metteInCoda, scriviLog, bloccaPubblicazione } from "@/lib/dati";
 import { lintContenuto } from "@/lib/linter";
 import { pubblicaSuZernio } from "@/lib/zernio";
 import { CANALI } from "@/lib/brand";
@@ -9,7 +9,8 @@ import { rispondiErrore } from "@/lib/api";
 /**
  * Passo 5 — mette un contenuto (con variante scelta) in coda di
  * pubblicazione. Linter obbligatorio PRIMA di mettere in coda (SPEC.md).
- * La pubblicazione reale è dichiaratamente bloccata: vedi lib/zernio.ts.
+ * La chiamata a Zernio è reale (lib/zernio.ts): blocca se non c'è un account
+ * SHEis collegato per il canale, non ripiega mai su un account Alkemia.
  */
 export const runtime = "nodejs";
 
@@ -47,8 +48,23 @@ export async function POST(req: Request) {
     });
     await scriviLog({ contenutoId, azione: "programmato", attore: sessione.nome, attoreId: sessione.id, dettaglio: { canale, quando } });
 
-    // Zernio non è collegato in questo ambiente: dichiara il blocco e ferma la coda per questa riga.
-    const esitoZernio = await pubblicaSuZernio({ contenutoId, canale });
+    const testoPost = [
+      contenuto.hook,
+      contenuto.copy,
+      contenuto.hashtag && contenuto.hashtag.length > 0 ? contenuto.hashtag.map((h) => `#${h}`).join(" ") : null,
+      contenuto.cta,
+    ]
+      .filter(Boolean)
+      .join("\n\n");
+
+    let mediaUrls: string[] | undefined;
+    if (contenuto.variante_scelta_id) {
+      const variante = await getVariante(contenuto.variante_scelta_id);
+      if (variante?.asset_url) mediaUrls = [variante.asset_url];
+    }
+
+    // Verifica dal vivo, a ogni chiamata: blocca se nessun account SHEis è collegato per questo canale.
+    const esitoZernio = await pubblicaSuZernio({ contenutoId, canale, testo: testoPost, mediaUrls, programmatoPer: quando });
     if (!esitoZernio.ok) {
       await bloccaPubblicazione(pubblicazione.id, esitoZernio.motivo);
     }

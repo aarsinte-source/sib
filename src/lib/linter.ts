@@ -42,9 +42,21 @@ function cercaTermini(testo: string, termini: readonly string[], regola: string,
     if (!termine) continue;
     // "€" e simili non hanno confini di parola: gestiti senza \b.
     const haWordBoundary = /^[\p{L}\p{N}]/u.test(termine) && /[\p{L}\p{N}]$/u.test(termine);
-    const pattern = haWordBoundary
-      ? new RegExp(`\\b${escapeRegExp(termine)}\\b`, "giu")
-      : new RegExp(escapeRegExp(termine), "gi");
+    // ⚠️ Confronto per RADICE, non per parola esatta — misurato il 2026-08-03.
+    // Con i soli confini di parola, «koszyka» (genitivo polacco di «koszyk»)
+    // passava indisturbato: le lingue slave declinano e quelle romanze concordano,
+    // quindi chi confronta parole intere blocca il caso da manuale e lascia passare
+    // quello vero. Due linter dello stesso sistema davano verdetti diversi sullo
+    // stesso testo, che è il modo peggiore di sbagliare.
+    // Il suffisso libero è ammesso SOLO da 6 caratteri in su: sotto quella soglia
+    // causerebbe falsi positivi grossolani ("cart" colpirebbe "cartella",
+    // "compra" colpirebbe "comprare" — che però è già in elenco per esteso).
+    const ammettiSuffisso = haWordBoundary && termine.length >= 6 && !termine.includes(" ");
+    const pattern = !haWordBoundary
+      ? new RegExp(escapeRegExp(termine), "gi")
+      : ammettiSuffisso
+        ? new RegExp(`\\b${escapeRegExp(termine)}\\p{L}{0,3}\\b`, "giu")
+        : new RegExp(`\\b${escapeRegExp(termine)}\\b`, "giu");
     const m = pattern.exec(testo);
     if (m) {
       trovate.push({
