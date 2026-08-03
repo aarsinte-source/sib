@@ -58,22 +58,59 @@ def gia_pubblicato(db: supabase.SupabaseClient, contenuto_id: str, canale: str) 
 
 
 def account_sheis_per_canale(canale: str, account_live: list[dict], mappa_attesa: dict) -> tuple[bool, str]:
-    """Verifica REALE: la chiave Zernio ha in QUESTO momento un account SHEis
-    per questo canale? Non ci si fida di un commento: si guarda la risposta
-    dell'API appena ricevuta.
+    """Verifica REALE: la chiave Zernio ha in QUESTO momento un account CON
+    L'IDENTITÀ SHEis attesa per questo canale? Non basta che esista *un*
+    account su quella piattaforma — oggi l'unico account instagram è quello
+    personale di Andrei, e un controllo di sola piattaforma lo farebbe
+    passare per "SHEis". Qui si confronta l'identità VERA restituita da
+    Zernio (username, o l'id interno `_id`) con quella dichiarata in
+    `config/workers.json`.
+
+    ⚠️ Bug reale trovato e corretto (revisione avversariale 2026-08-03): la
+    versione precedente leggeva `atteso_id` solo per controllare che NON
+    fosse vuoto, poi verificava solo `platform == canale` — qualunque valore
+    non-vuoto in config, anche un segnaposto scritto per errore, avrebbe
+    fatto passare l'unico account esistente su quella piattaforma (quello di
+    Andrei). "Impossibile per costruzione" richiede un confronto vero, non
+    un controllo di presenza.
     """
-    atteso_id = (mappa_attesa.get("zernio_account_ids_sheis", {}) or {}).get(canale)
-    if not atteso_id:
-        riepilogo = ", ".join(f"{a['platform']}:{a.get('username') or a.get('display_name')}" for a in account_live) or "nessuno"
+    riepilogo = ", ".join(
+        f"{a['platform']}:{a.get('username') or a.get('display_name') or a.get('zernio_account_id')}"
+        for a in account_live
+    ) or "nessuno"
+
+    atteso = (mappa_attesa.get("zernio_account_ids_sheis", {}) or {}).get(canale)
+    if not atteso or not isinstance(atteso, dict):
         return False, (
-            f"nessun account SHEis collegato a Zernio per il canale '{canale}' "
-            f"(verificato ora: la chiave vede {len(account_live)} account — {riepilogo} — "
-            "tutti Alkemia). Collegare l'account SHEis via OAuth su Zernio prima di pubblicare."
+            f"nessuna identità SHEis configurata per il canale '{canale}' in "
+            f"config/workers.json→zernio_account_ids_sheis (serve un oggetto con "
+            f"'username' e/o 'zernio_account_id', non una stringa vuota o segnaposto) "
+            f"— verificato ora: la chiave Zernio vede {len(account_live)} account ({riepilogo}). "
+            "Collegare l'account SHEis via OAuth su Zernio e configurare qui la sua identità reale."
         )
-    match = [a for a in account_live if a.get("platform") == canale]
-    if not any(True for a in match):  # id non esposto da /accounts in modo affidabile: si verifica platform+presenza
-        return False, f"account SHEis atteso per '{canale}' non risulta collegato oggi su Zernio"
-    return True, "account SHEis verificato"
+
+    atteso_username = (str(atteso.get("username") or "")).strip().lower() or None
+    atteso_id = (str(atteso.get("zernio_account_id") or "")).strip() or None
+    if not atteso_username and not atteso_id:
+        return False, (
+            f"la configurazione per '{canale}' non contiene né 'username' né 'zernio_account_id' "
+            "validi — non verificabile, blocco per sicurezza invece di assumere un match"
+        )
+
+    for a in account_live:
+        if a.get("platform") != canale:
+            continue
+        if atteso_id and a.get("zernio_account_id") == atteso_id:
+            return True, f"account SHEis verificato per identità (zernio_account_id={atteso_id})"
+        if atteso_username and (a.get("username") or "").strip().lower() == atteso_username:
+            return True, f"account SHEis verificato per identità (username={atteso_username})"
+
+    riferimento = f"zernio_account_id={atteso_id}" if atteso_id else f"username={atteso_username}"
+    return False, (
+        f"nessun account su '{canale}' corrisponde all'identità SHEis attesa ({riferimento}) — "
+        f"trovati invece: {riepilogo}. Non pubblico su un'identità diversa da quella dichiarata, "
+        "anche se esiste un account sulla stessa piattaforma."
+    )
 
 
 def gestisci_candidato(db: supabase.SupabaseClient, zc: zernio.ZernioClient, contenuto: dict,

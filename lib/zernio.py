@@ -95,8 +95,20 @@ class ZernioClient:
 
 
 def account_per_brand(esito_accounts: Esito) -> list[dict]:
-    """Normalizza la lista account in una forma piatta: platform, username,
-    displayName. Usato dal gate 'esiste un account SHEis?' del publisher.
+    """Normalizza la lista account in una forma piatta: zernio_account_id
+    (l'`_id` interno di Zernio — SEMPRE presente, stabile, la chiave più
+    affidabile), platform, username, display_name.
+
+    ⚠️ Fatto verificato dal vivo il 2026-08-03: la forma dei metadata NON è la
+    stessa fra piattaforme. Facebook espone `selectedPageUsername`/
+    `userProfile`; Instagram invece NON ha questi campi — la sua identità vive
+    sotto `metadata.profileData.username` (verificato sull'account reale
+    andrei_arsinte: `selectedPageUsername` e `userProfile` erano entrambi
+    `None`, `profileData.username` era `"andrei_arsinte"`). Una versione
+    precedente di questa funzione cercava solo la forma Facebook e su
+    Instagram tornava sempre `username=None` — il gate a valle non aveva
+    nulla da confrontare e degradava silenziosamente a un controllo di sola
+    piattaforma. Qui si cercano ENTRAMBE le forme.
     """
     if not esito_accounts.ok:
         return []
@@ -105,12 +117,15 @@ def account_per_brand(esito_accounts: Esito) -> list[dict]:
     out = []
     for a in grezzi or []:
         md = a.get("metadata", {}) or {}
+        profile_data = md.get("profileData") or {}
         username = (
             md.get("selectedPageUsername")
+            or profile_data.get("username")
             or (md.get("userProfile") or {}).get("username")
             or md.get("username")
         )
         out.append({
+            "zernio_account_id": a.get("_id"),
             "platform": a.get("platform"),
             "username": username,
             "display_name": a.get("displayName"),

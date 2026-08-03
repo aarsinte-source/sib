@@ -6,6 +6,7 @@
   "telegram_bot_id": "",
 
   "zernio_account_ids_sheis": {
-    "_nota": "VUOTO DI PROPOSITO — fatto misurato 2026-08-03: la chiave Zernio vede SOLO 2 account, entrambi Alkemia (facebook alkemia.marketing, instagram andrei_arsinte). Nessun account SHEis esiste ancora su Zernio. Finché questa mappa resta vuota, publisher_zernio.py blocca OGNI pubblicazione per mancanza di account SHEis — è il comportamento corretto, non un bug. Quando Mauro collega gli account SHEis via OAuth su Zernio, aggiungere qui: {\"instagram\": \"<id account SHEis>\", \"facebook\": \"<id account SHEis>\"}."
+    "_nota": "VUOTO DI PROPOSITO — fatto misurato 2026-08-03: la chiave Zernio vede SOLO 2 account, entrambi Alkemia (facebook alkemia.marketing, instagram andrei_arsinte). Nessun account SHEis esiste ancora su Zernio. Finché questa mappa resta vuota, publisher_zernio.py blocca OGNI pubblicazione per mancanza di account SHEis — è il comportamento corretto, non un bug.",
+    "_formato": "Per canale, un OGGETTO (mai una stringa nuda o un segnaposto) con ALMENO uno fra 'username' e 'zernio_account_id'. Il gate confronta questi valori CONTRO l'identità reale restituita da Zernio ad ogni run — un valore presente ma sbagliato viene rifiutato quanto uno vuoto: la presenza della chiave da sola non basta MAI a sbloccare la pubblicazione. Esempio quando Mauro collega gli account SHEis: {\"instagram\": {\"username\": \"sheisbeautyhair\", \"zernio_account_id\": \"<_id restituito da GET /accounts>\"}, \"facebook\": {\"username\": \"sheis.beauty\"}}."
   }
 }
