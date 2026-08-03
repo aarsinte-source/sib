@@ -7,7 +7,11 @@ Un BLOCK non è un warning: è uno stop.
 import re
 from dataclasses import dataclass, field
 
-from .vincoli_brand import PATTERN_NEGOZIO, negozio_eccezione, numero_documentato
+from .vincoli_brand import (PATTERN_NEGOZIO, negozio_eccezione, numero_documentato,
+                            nega_il_canale, viola_firewall, CLAIM_VIETATI,
+                            FIREWALL_PATTERN, PREZZO)
+
+from re import escape as _re_escape
 
 BLOCK, WARN = "BLOCK", "WARN"
 
@@ -90,6 +94,16 @@ PRICE_PATTERNS = [
      "valuta nominata, anche in lettere e senza cifra accanto"),
 ]
 
+# ⚠️ La fonte elenca fra le cifre commerciali vietate anche «offerta»,
+# «promo» e «saldo». Questa lista, scritta a mano, non le aveva: «Scrivici
+# per ricevere un'offerta commerciale» passava di qui e veniva bloccata
+# dagli altri due filtri. I termini della fonte si aggiungono, non si
+# ricopiano — se domani ne arriva un altro, arriva da solo.
+PRICE_PATTERNS += [
+    (r"\b" + _re_escape(t) + r"\w{0,3}\b", f"termine commerciale vietato dalla fonte: «{t}»")
+    for t in PREZZO if t.isalpha() and len(t) >= 5
+]
+
 # Claim quantificati: un numero è dimostrabile solo se il cliente l'ha
 # documentato. Regola presa dal filtro gemello dei contenuti, dove esisteva già
 # — qui mancava del tutto, ed era la seconda divergenza misurata: «Siamo leader
@@ -142,53 +156,25 @@ SHOP_ALLOWED = [
 #   - parafrasi ("il framework esclusivo, il ventinovesimo pilastro...") → le due
 #     regole di co-occorrenza sotto, riprese da ~/alkemia-sheis-workers/lib/linter.py
 #     (già verificate contro 14 test avversariali, inclusa la parafrasi elusiva)
-M29_PATTERNS = [
-    (r"\bmetodo\s*29\b", "riferimento interno vietato"),
-    (r"\bmetodo29\b", "riferimento interno vietato (senza spazio)"),
-    (r"\bmethod\s*29\b", "riferimento interno vietato"),
-    (r"\bm[-.\s]?29\b", "riferimento interno vietato (sigla M29/M-29/M.29/M 29)"),
-    (r"\bm[ée]todo\s*29\b", "riferimento interno vietato"),
-    (r"\bmetodo\s*ventinove\b|\bmetodo\s*ventinovesimo\b",
-     "riferimento interno vietato (grafia estesa)"),
-    (r"(ventinovesim\w*|ventinove|\b29\b)[^.\n]{0,40}"
-     r"(pilastr\w*|metodo\s*esclusiv\w*|sistema\s*esclusiv\w*|segreto\s*interno)",
-     "parafrasi elusiva del firewall (numero/ordinale + 'metodo esclusivo/pilastro')"),
-    (r"(pilastr\w*|metodo\s*esclusiv\w*|sistema\s*esclusiv\w*|segreto\s*interno)"
-     r"[^.\n]{0,40}(ventinovesim\w*|ventinove|\b29\b)",
-     "parafrasi elusiva del firewall (ordine invertito)"),
-]
+# ⚠️ Il firewall NON si scrive più qui. Il collaudo del 3/8 ha misurato due
+# vie d'uscita da questo elenco: «il metodo-29» col trattino e «approccio
+# ventinove passi, applicato al metodo». Un elenco di stringhe non difende
+# una regola che il cliente ha dichiarato non negoziabile. Le forme vengono
+# dalla fonte e valgono per tutti e quattro i filtri insieme.
+M29_PATTERNS = [(f['pattern'], f['cosa']) for f in FIREWALL_PATTERN]
 
 # 4) Claim non documentati (senza CPNP/PIF non si dicono).
-CLAIM_PATTERNS = [
-    # ⚠️ Accordo di genere: «clinicamente provata» (formula, femminile) sfuggiva
-    # perché la riga cercava solo il maschile singolare. Misurato il 3/8.
-    (r"\bclinicamente\s+(provat|testat|dimostrat)\w*|\bclinically proven\b|"
-     r"\bdermatologicamente\s+(provat|dimostrat)\w*|"
-     r"\bscientificamente\s+(provat|dimostrat)\w*|\bcl[íi]nicamente\s+(probad|test)\w*",
-     "claim clinico non documentato"),
-    (r"\b(risultati garantiti|garantiamo|garantito al|guaranteed results|"
-     r"resultados garantizados)\b", "garanzia di risultato"),
-    (r"\b(il migliore (del mercato|in assoluto)|numero 1 (in|del)|the best on the market|"
-     r"el mejor del mercado|leader mondiale|leader assoluto)\b", "superlativo non dimostrabile"),
-    (r"\b(cura la (calvizie|alopecia)|fa ricrescere i capelli|blocca la caduta|"
-     r"anticaduta garantito|regrows hair)\b", "claim medico/terapeutico"),
-    (r"\b(100% naturale|totalmente naturale|completamente naturale|100% natural)\b",
-     "claim naturale assoluto (il dato reale è 99% origine naturale)"),
-]
+# ⚠️ Anche i claim vengono dalla fonte. Scritti a mano lasciavano
+# passare i numeri in LETTERE: «YOUNIC lavora in cinque fasi» passava
+# da tutti e quattro i filtri, e le fasi documentate sono TRE.
+CLAIM_PATTERNS = [(c['pattern'], c['cosa']) for c in CLAIM_VIETATI]
 # ⚠️ Toppa mirata (revisione 3/8), non una soluzione generale: un elenco chiuso di
 # frasi non può coprire ogni claim inventabile in linguaggio libero — "il partner
 # più richiesto dai saloni italiani da tre generazioni" non ha né cifre né le
 # parole sopra, eppure è un'affermazione che SHEis non può dimostrare. Copre il
 # caso trovato e le varianti vicine; se ne salta fuori un altro va aggiunto qui,
 # non riscritto da zero.
-LEGACY_CLAIM_PATTERNS = [
-    (r"\bda (due|tre|quattro|cinque|sei|molte)\s+generazioni\b",
-     "claim di eredità/tradizione non documentato"),
-    (r"\bda decenni\b|\bstorica azienda\b|\bleader (storico|di riferimento)\b",
-     "claim di anzianità/leadership non documentato"),
-    (r"\b(il|la) (partner|scelta) più (richiest[oa]|amat[oa]|scelt[oa])\b",
-     "superlativo di preferenza non documentato"),
-]
+LEGACY_CLAIM_PATTERNS = []
 
 # 3b) Script inatteso — evasione trovata in revisione (3/8): lo stesso testo
 # vietato scritto in arabo passa indisturbato perché i pattern sopra sono tutti
@@ -252,6 +238,8 @@ def _shop_allowed(text: str, match: str) -> bool:
     una frase che NEGA l'online — che è la leva di SHEis, non la violazione."""
     if negozio_eccezione(match):
         return True
+    if nega_il_canale(text):
+        return True
     low = text.lower()
     idx = low.find(match.lower())
     window = low[max(0, idx - 60): idx + len(match) + 20]
@@ -289,8 +277,14 @@ def lint(text: str, channel: str = "linkedin", touch: str = "touch2") -> LintRes
     compact = _compact_digits(text)
     if compact != text:
         v += _find(compact, M29_PATTERNS, BLOCK, "metodo-29 (cifre separate da spazi)")
-    v += _find(text, CLAIM_PATTERNS, BLOCK, "claim-non-documentati")
-    v += _find(text, LEGACY_CLAIM_PATTERNS, BLOCK, "claim-non-documentati")
+    # ⚠️ I claim includono ora le quantità scritte in LETTERE («cinque fasi»),
+    # e fra quelle c'è «tre fasi», che è documentata. Quindi anche questo
+    # controllo consulta l'elenco dei numeri leciti: senza, bloccherebbe il
+    # dato vero del cliente — lo stesso errore già pagato sul «99%».
+    for pat, dettaglio in CLAIM_PATTERNS:
+        m = re.search(pat, text, re.IGNORECASE)
+        if m and not numero_documentato(text, m.start(), m.end()):
+            v.append(Violation(BLOCK, "claim-non-documentati", dettaglio, m.group(0)))
     v += _find(text, CONSUMER_PATTERNS, BLOCK, "consumatore-finale")
     sv = _script_violation(text)
     if sv:
