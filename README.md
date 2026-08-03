@@ -14,6 +14,15 @@ Due modi di produrre una campagna, stessi guardrail sotto entrambi (`lib/`):
   finché non arrivano gli accessi. Vedi sezione 0.
 - **`stato_accessi.mjs`** — risponde in italiano a "possiamo lanciare?", con la richiesta pronta
   da inoltrare al cliente per ciò che manca. È la checklist della sezione 1, ma eseguibile.
+- **`attiva.mjs`** — attivazione guidata: chiede un valore alla volta, lo verifica contro l'API
+  vera prima di accettarlo (si ferma se valuta ≠ EUR o fuso ≠ Europe/Rome, gli unici due errori
+  che si pagano una volta sola), scrive `config.local.json` da solo, e dice cosa manca ancora.
+  Non serve aprire nessun file a mano. Guida non tecnica: **`PRONTI-AL-LANCIO.md`**.
+- **`prova-a-secco.mjs`** — simula il lancio dei 3 blueprint end-to-end (sia il percorso statico
+  di `launch.mjs` sia 3 brief di prova sul percorso di `campagna_da_brief.mjs`) con placeholder
+  risolti a valori finti, e verifica che il payload sarebbe valido per Meta: campi obbligatori,
+  `advantage_audience`, budget in centesimi, date coerenti, creatività collegate, guardrail di
+  brand. Dice "SI, QUESTO PARTIREBBE" o l'elenco esatto di cosa lo bloccherebbe.
 
 ---
 
@@ -30,7 +39,10 @@ Verificato, non ipotizzato (rilancia `node stato_accessi.mjs` per la versione se
 | Pixel | Sconosciuto. Il sito usa Matomo, non Google Analytics: probabile che un pixel Meta non ci sia proprio. |
 | Blueprint, copy, script | **Pronti.** Validati, testati. |
 | `campagna_da_brief.mjs` (media buyer su richiesta) | **Costruito e funzionante in simulazione.** Nessuna chiamata reale a Meta è possibile finché manca l'account. |
-| Tabella `sheis_campagne` (Supabase, SHEis Studio) | **Non ancora esistente.** `campagna_da_brief.mjs` scrive nel frattempo in `.campagne/registro.json` (stessa forma dei record) — vedi `lib/campagne-store.mjs`. |
+| `attiva.mjs` (attivazione guidata) + `prova-a-secco.mjs` (prova a secco end-to-end) | **Costruiti e testati.** Vedi `PRONTI-AL-LANCIO.md`. |
+| Linter di brand (`lib/guardrails.mjs`) | **Legge le liste direttamente da `BRAND-IDENTITY_sheis_2026-08-03.json`** (non le duplica più a mano): copertura IT/EN/ES/FR/DE/PL/PT/AR, confronto per radice, regola sui claim numerici, eccezione per le negazioni brand-safe. Regressione coperta da `test-guardrails.mjs`. |
+| ⚠️ Tetto di spesa aggregato | I 3 blueprint **insieme** costano 1.003,20 EUR/mese, **3,20 EUR sopra** il tetto dichiarato (1.000). `node launch.mjs` senza `--only` si rifiuta di partire (anche in anteprima). Si lancia sempre con `--only`, nella sequenza a fasi di cui sotto — non è un difetto da correggere nei numeri, è il motivo per cui la sequenza esiste. |
+| Tabella `sheis_campagne` (Supabase, SHEis Studio) | **Non ancora esistente.** `campagna_da_brief.mjs` scrive nel frattempo in `.campagne/registro.json` (stessa forma dei record) — vedi `lib/campagne-store.mjs`, unica porta verso lo storage: passare al DB richiede solo le due variabili d'ambiente, nessun altro file da toccare. |
 
 **Traduzione onesta:** il lavoro creativo e strategico è finito, e ora anche il motore che trasforma
 un brief in una campagna. Il blocco è puramente di accessi, e non dipende da noi. Non è una stima
@@ -250,13 +262,24 @@ Non è un abbellimento. Blocca la creazione se in una creatività compaiono:
 
 | Categoria | Termini | Perché |
 |---|---|---|
-| Conflitto di canale | shop, negozio, carrello, acquista, e-commerce, checkout, tienda, buy now | Il cliente ha **rifiutato** la vendita diretta: è un danno verso la rete di distributori |
-| Prezzi | €, "12,90 EUR", euro, prezzo, precio, pricing, listino, sconto, descuento | *"La discriminante è il prezzo"* — `6b6cc1a3 · 2:12:18` |
-| Firewall M29 | Metodo 29, M29 | Divieto assoluto: non deve mai risultare collegato a SHEis |
+| Conflitto di canale | shop, negozio, carrello, acquista, e-commerce, checkout, tienda, carrito, koszyk(a), carrinho, Warenkorb, panier, arabo... | Il cliente ha **rifiutato** la vendita diretta: è un danno verso la rete di distributori |
+| Prezzi | €, euro, prezzo/prezzi, precio, pricing, listino, sconto/sconti, offerta/offerte, saldo/saldi | *"La discriminante è il prezzo"* — `6b6cc1a3 · 2:12:18` |
+| Firewall M29 | Metodo 29, Metodo29, Method 29, M29, e parafrasi numeriche vicine a "metodo" | Divieto assoluto: non deve mai risultare collegato a SHEis |
+| Claim numerici | qualunque numero accostato a %, minuti, fasi, anni... fuori dall'elenco documentato (15, 83, 99, 3) | Un numero non documentato è un claim che l'azienda non può dimostrare |
 
-Testato con violazioni reali iniettate di proposito: le becca tutte, indica il file, il campo,
-il testo intorno e il perché. **Non è aggirabile con un flag.** Se un annuncio le viola, si riscrive
-l'annuncio.
+**Fonte unica**: la lista di termini **non è più copiata a mano qui** — `lib/guardrails.mjs` la
+legge direttamente da `clienti/sheis-beauty-aiconsult/data/BRAND-IDENTITY_sheis_2026-08-03.json`
+(con uno snapshot di sicurezza se il file non è raggiungibile, sempre dichiarato a schermo). Il
+confronto è **per radice, non per parola esatta** (allineato a
+`~/alkemia-sheis-studio/src/lib/linter.ts`): "koszyka" (genitivo polacco di "koszyk") viene preso
+lo stesso, "cartella" no (il suffisso libero scatta solo da 6 caratteri in su). Una **negazione
+brand-safe** ("non siamo in vendita online, né su un e-commerce nostro") viene riconosciuta ed
+**esentata** — ma solo per la categoria "conflitto di canale": prezzi e firewall M29 restano
+assoluti anche in negazione. Ogni esenzione è mostrata, mai silenziosa.
+
+Testato con violazioni reali iniettate di proposito (`node test-guardrails.mjs`): le becca tutte,
+indica il file, il campo, il testo intorno e il perché. **Non è aggirabile con un flag.** Se un
+annuncio le viola, si riscrive l'annuncio.
 
 Il linter guarda solo i campi che finiscono sotto gli occhi di un lettore (`message`, `name`,
 `description`, `caption`, `label`). I metadati dei blueprint parlano di sconti e listini di
@@ -285,7 +308,14 @@ performance: farebbe uscire la consegna dalla zona del distributore, che è un *
 | **B** | Italia — distributori | ~243 EUR | `OUTCOME_LEADS` | **Sotto soglia** |
 | **C** | Saloni — awareness zona pilota | ~91 EUR | `OUTCOME_AWARENESS` | **OK** |
 
-Totale a regime: **1.003 EUR/mese**, esattamente al tetto.
+Totale a regime: **1.003,20 EUR/mese** — misurato con `node prova-a-secco.mjs`, **3,20 EUR sopra**
+il tetto di 1.000 EUR dichiarato in `config.example.json`. Non è un arrotondamento innocuo: il
+codice confronta con un `>` stretto, quindi `node launch.mjs` senza `--only` (dry-run o `--live`)
+**si rifiuta di partire**, anche solo per mostrare l'anteprima. La sequenza di accensione a fasi
+qui sotto evita il problema in pratica (mai le tre insieme), ma va sempre lanciata con `--only`.
+Se in futuro si vuole un `node launch.mjs` "nudo" che funzioni con tutti e tre insieme, la scelta
+(alzare il tetto dichiarato o tagliare ~4 EUR/giorno su un blueprint) è di Mauro, non una modifica
+silenziosa da fare qui.
 
 **Sequenza di accensione: A e C nel mese 1 (760 EUR). B entra nel mese 2**, solo dopo che A ha un
 costo per lead misurato. Accendere tutto insieme significa dimezzare campagne già sotto soglia.
@@ -323,13 +353,19 @@ La campagna B vale come rinforzo, e va raccontata a Mauro per quello che è.
 ├── launch.mjs                        launcher blueprint statici A/B/C — preflight, linter, dry-run
 ├── campagna_da_brief.mjs             media buyer su richiesta — brief in linguaggio naturale → campagna
 ├── stato_accessi.mjs                 "possiamo lanciare?" — checklist eseguibile + richiesta pronta
+├── attiva.mjs                        attivazione guidata — chiede, verifica contro l'API vera, salva
+├── prova-a-secco.mjs                 prova a secco end-to-end (blueprint statici + brief) — nessuna chiamata a Meta
+├── PRONTI-AL-LANCIO.md               guida non tecnica: cosa chiedere, in che ordine, cosa lanciare
+├── test-guardrails.mjs               regressione del linter di brand (node --test)
+├── test-meta-api.mjs                 regressione del gate valuta/fuso (node --test)
+├── test-brief-parser.mjs             regressione del parser brief (node --test)
 ├── config.example.json               da copiare in config.local.json
 ├── config.local.json                 token e ID — GITIGNORATO, mai committare
 ├── lib/                              logica condivisa dai tre script sopra — un solo posto, non tre
 │   ├── ui.mjs                        output colorato (ok/warn/fail/title)
-│   ├── guardrails.mjs                termini vietati di brand + linter — FONTE UNICA
+│   ├── guardrails.mjs                termini vietati di brand + linter — legge BRAND-IDENTITY, FONTE UNICA
 │   ├── placeholders.mjs              <<TOKEN>> → config.resolve
-│   ├── meta-api.mjs                  client Graph API minimo (fetch nativo)
+│   ├── meta-api.mjs                  client Graph API minimo (fetch nativo) + verificaValutaEFuso()
 │   ├── preflight.mjs                 verifica accessi reali (token, account, pagina, IG, pixel, moduli)
 │   ├── validate.mjs                  guardrail + advantage_audience + coerenza budget su un blueprint
 │   ├── payload-builder.mjs           payload ESATTO per Meta — build (puro) + execute (POST reali)
@@ -352,7 +388,9 @@ Deliverable collegati nel workspace:
 - Copy IT/EN/ES — `clienti/sheis-beauty-aiconsult/copy/AD-COPY_lancio_2026-07-20.md`
 - Guardrail di brand — `.claude/skills/sheis-brand-core/`
 - Identità di brand misurata — `clienti/sheis-beauty-aiconsult/data/BRAND-IDENTITY_sheis_2026-08-03.json`
-  (il linter di `lib/guardrails.mjs` incrocia anche questa fonte)
+  (il linter di `lib/guardrails.mjs` **legge da qui**, non ricopia le liste — vedi §3)
 - Schema `sheis_campagne` — `~/alkemia-sheis-backend/migrations/0002_studio.sql`
+- Guida non tecnica all'attivazione — `PRONTI-AL-LANCIO.md`
 
-Requisiti: **Node ≥ 18** (usa `fetch` nativo). Testato su v24.14.1. Nessuna dipendenza esterna.
+Requisiti: **Node ≥ 18** (usa `fetch` nativo e `node:test`). Testato su v24.14.1. Nessuna dipendenza
+esterna. Test: `node --test test-guardrails.mjs test-meta-api.mjs test-brief-parser.mjs`.
