@@ -1,0 +1,10 @@
+[Unit]
+Description=Ogni ora — genera le varianti per i contenuti appena approvati
+
+[Timer]
+OnCalendar=hourly
+Persistent=true
+Unit=sheis-creative.service
+
+[Install]
+WantedBy=timers.target

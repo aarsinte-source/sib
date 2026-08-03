@@ -1,0 +1,14 @@
+[Unit]
+Description=Lunedì 09:00 Europe/Rome — report settimanale SHEis
+# ⚠️ OnCalendar usa il timezone LOCALE del sistema (/etc/localtime). Il VPS
+# deve essere impostato su Europe/Rome, come gli altri timer Alkemia — se è
+# in UTC, sposta l'orario qui sotto di conseguenza (08:00 UTC in inverno,
+# 07:00 UTC in estate) o imposta il timezone di sistema.
+
+[Timer]
+OnCalendar=Mon *-*-* 09:00:00
+Persistent=true
+Unit=sheis-report.service
+
+[Install]
+WantedBy=timers.target

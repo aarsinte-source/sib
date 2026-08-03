@@ -1,0 +1,224 @@
+"""Linter di marca pre-pubblicazione — l'ultimo cancello prima che un post esca.
+
+Regole (fonte: BRAND-IDENTITY_sheis_2026-08-03.json + .claude/skills/sheis-brand-core/
+guardrails.json — QUESTO file non inventa regole, le implementa meccanicamente):
+
+  1. Prezzi e cifre commerciali — mai un numero che valga come prezzo, sconto, listino,
+     margine. SHEis non vende online e non mostra mai un prezzo pubblico (brand-core §7).
+  2. Lessico da negozio, in OGNI lingua — shop/carrello/acquista/cart/tienda/panier/
+     Warenkorb/koszyk/loja/متجر e affini. Il posizionamento è "portale ordini"/
+     "area riservata", mai un negozio.
+  3. «Metodo 29» in ogni grafia e parafrasi — firewall non negoziabile, trasversale,
+     vale su OGNI contenuto SHEis senza eccezioni (guardrails.json §1).
+  4. Claim numerici fuori dall'elenco documentato — solo "15 minuti di posa",
+     "99% di origine naturale", "tre fasi YOUNIC", "senza ammoniaca" sono numeri
+     che SHEis può dimostrare. Ogni altra cifra-claim (percentuali, "X giorni",
+     "X anni di garanzia"...) è indimostrabile finché non arriva da Mauro.
+  5. Claim assoluti/clinici non documentati e "100% naturale" (contraddice il dato
+     reale: 99%).
+
+Ogni violazione BLOCK porta la REGOLA e la FRASE ESATTA che l'ha fatta scattare —
+è il requisito esplicito: "blocca e dice quale regola ha fermato quale frase".
+Nessuna eccezione silenziosa: se un testo passa, `LintResult.ok` è True e basta.
+"""
+from __future__ import annotations
+
+import re
+from dataclasses import dataclass, field
+
+BLOCK, WARN = "BLOCK", "WARN"
+
+
+@dataclass
+class Violazione:
+    livello: str
+    regola: str
+    dettaglio: str
+    frase: str = ""
+
+    def __str__(self) -> str:
+        punta = f'  →  "{self.frase}"' if self.frase else ""
+        return f"[{self.livello}] {self.regola}: {self.dettaglio}{punta}"
+
+
+@dataclass
+class LintResult:
+    ok: bool
+    violazioni: list[Violazione] = field(default_factory=list)
+
+    @property
+    def bloccanti(self) -> list[Violazione]:
+        return [v for v in self.violazioni if v.livello == BLOCK]
+
+    def motivo_blocco(self) -> str:
+        """Una riga in italiano, per sheis_pubblicazioni.motivo_blocco. Vuota se ok."""
+        if not self.bloccanti:
+            return ""
+        prime = self.bloccanti[:3]
+        resto = len(self.bloccanti) - len(prime)
+        righe = [str(v) for v in prime]
+        if resto > 0:
+            righe.append(f"(+{resto} altra/e violazione/i)")
+        return " · ".join(righe)
+
+    def render(self) -> str:
+        if not self.violazioni:
+            return "  linter: OK — nessuna violazione"
+        return "\n".join(f"  {v}" for v in self.violazioni)
+
+
+# ---------------------------------------------------------------- 1. prezzi
+PREZZO_PATTERNS = [
+    (r"[€$£]\s?\d", "simbolo di valuta seguito da una cifra"),
+    (r"\b\d+[.,]?\d*\s?(euro|eur|dollari|usd|dollars)\b", "importo esplicito"),
+    (
+        r"\b(sconto|sconti|scontato|scontata|scontati|promo|promozione|saldo|saldi|"
+        r"listino|listini|price\s?list|tarifa|pricing|"
+        r"margine|margini|ricarico|markup|descuento|discount)\b",
+        "lessico prezzo/sconto/listino/margine — SHEis non mostra mai un prezzo pubblico",
+    ),
+]
+PREZZO_NUDO = [
+    (r"\bprezzo|prezzi|precio|precios|price|prices\b", "parola 'prezzo' nominata"),
+]
+
+# ------------------------------------------------- 2. lessico da negozio (multilingua)
+# Lista letterale richiesta: shop, carrello, acquista, cart, tienda, panier, Warenkorb,
+# koszyk, loja, متجر — più le varianti immediate (verbo comprare, e-commerce, checkout).
+NEGOZIO_PATTERNS = [
+    (r"\bshop\b", "shop (EN/IT) — vietato, si dice 'portale ordini'/'area riservata'"),
+    (r"\bnegozio\b", "negozio (IT)"),
+    (r"\bcarrello\b", "carrello (IT)"),
+    (r"\bacquista\b|\bacquistare\b", "acquista (IT)"),
+    (r"\bcompra\b|\bcomprare\b|\bcomprato\b", "compra/comprare (IT)"),
+    (r"\border(a|are|ina)\b", "ordina/ordinare come CTA d'acquisto diretto (IT)"),
+    (r"\bcart\b", "cart (EN)"),
+    (r"\bbuy\s?now\b|\bbuy\b", "buy (EN)"),
+    (r"\bcheckout\b", "checkout (EN)"),
+    (r"\be-?commerce\b", "e-commerce"),
+    (r"\btienda\b", "tienda (ES)"),
+    (r"\bcomprar\b", "comprar (ES)"),
+    (r"\bpanier\b", "panier (FR)"),
+    (r"\bacheter\b", "acheter (FR)"),
+    (r"\bwarenkorb\b", "Warenkorb (DE)"),
+    (r"\bkaufen\b", "kaufen (DE)"),
+    (r"\bkoszyk\w*\b", "koszyk (PL) — anche forme declinate (koszyka/koszyku/koszykiem)"),
+    (r"\bloja\b", "loja (PT)"),
+    (r"\bcomprar\b", "comprar (PT)"),
+    (r"متجر", "متجر — shop (AR)"),
+    (r"عربة\s*تسوق|سلة\s*التسوق", "carrello (AR)"),
+]
+# Eccezione dichiarata: SHEis usa legittimamente "non vendiamo online" per NEGARE
+# l'e-commerce — è la leva, non la violazione. Vale sullo stesso pattern dell'outreacher.
+NEGOZIO_AMMESSO = [
+    r"non (siamo|vendiamo) (in vendita )?online",
+    r"nessun e-?commerce", r"niente e-?commerce",
+    r"we don'?t sell online", r"no online sales",
+    r"no vendemos online", r"no estamos en venta online",
+]
+
+# ---------------------------------------------------------- 3. firewall Metodo 29
+# Trasversale, sempre BLOCK, nessuna eccezione — vedi guardrails.json forbidden_pairs.
+M29_PATTERNS = [
+    (r"\bmetodo\s*29\b", "Metodo 29 (IT) — firewall non negoziabile"),
+    (r"\bmetodo29\b", "Metodo29 (IT, senza spazio)"),
+    (r"\bmethod\s*29\b", "Method 29 (EN)"),
+    (r"\bm[eé]todo\s*29\b", "método 29 (ES)"),
+    (r"\bm[-.\s]?29\b", "sigla M29/M-29/M.29"),
+    (r"\bmetodo\s*ventinove\b|\bmetodo\s*ventinovesimo\b", "Metodo Ventinove (grafia estesa IT)"),
+    # T13 (firewall-m29.md): parafrasi che aggira il nome per numero/ordinale —
+    # "ventinovesimo pilastro", "metodo esclusivo... 29", ecc. Il collegamento resta
+    # ricostruibile: si blocca la CO-OCCORRENZA fra un ordinale/numero "29"/"ventinove"
+    # e un lessico da "metodo interno esclusivo".
+    (
+        r"(ventinovesim\w*|ventinove|\b29\b)[^.\n]{0,40}"
+        r"(pilastr\w*|metodo\s*esclusiv\w*|sistema\s*esclusiv\w*|segreto\s*interno)",
+        "parafrasi elusiva del firewall (numero/ordinale 29 + 'metodo esclusivo/pilastro')",
+    ),
+    (
+        r"(pilastr\w*|metodo\s*esclusiv\w*|sistema\s*esclusiv\w*|segreto\s*interno)"
+        r"[^.\n]{0,40}(ventinovesim\w*|ventinove|\b29\b)",
+        "parafrasi elusiva del firewall (ordine invertito)",
+    ),
+]
+
+# --------------------------------------------- 4/5. claim numerici e assoluti
+# Whitelist ESATTA (brand-identity.regole_di_generazione.numeri_ammessi):
+#   "15 minuti di posa" · "99% di origine naturale" · "tre fasi YOUNIC" · "senza ammoniaca"
+CLAIM_QUANTIFICATO = [
+    (r"\b\d{1,3}\s?%", "percentuale non nell'elenco documentato"),
+    (r"\b\d+\s*(minuti|minuto|ore|ora)\b", "durata quantificata non documentata"),
+    (r"\b\d+\s*(giorni|giorno|mesi|mese|anni|anno)\b", "quantità temporale non documentata (garanzia/esperienza)"),
+]
+_CLAIM_AMMESSI_CONTESTO = [
+    re.compile(r"15\s*minuti[^.\n]{0,20}posa|posa[^.\n]{0,20}15\s*minuti", re.IGNORECASE),
+    re.compile(r"99\s?%[^.\n]{0,25}natural", re.IGNORECASE),
+    re.compile(r"natural[^.\n]{0,25}99\s?%", re.IGNORECASE),
+]
+
+CLAIM_ASSOLUTO_PATTERNS = [
+    (r"\bclinicamente (provato|testato)\b|\bclinically proven\b|\bscientificamente provato\b",
+     "claim clinico non documentato (serve CPNP/PIF)"),
+    (r"\brisultati garantiti\b|\bgarantiamo\b|\bgarantito al\b|\bguaranteed results\b|\bresultados garantizados\b",
+     "garanzia di risultato — vietata in cosmetica senza prova regolatoria"),
+    (r"\bil migliore (del mercato|in assoluto)\b|\bnumero\s?1 (in|del)\b|\bthe best on the market\b|"
+     r"\bel mejor del mercado\b|\bleader mondiale\b|\bleader assoluto\b",
+     "superlativo indimostrabile"),
+    (r"\bcura la (calvizie|alopecia)\b|\bfa ricrescere i capelli\b|\bblocca la caduta\b|"
+     r"\banticaduta garantito\b|\bregrows hair\b",
+     "claim medico/terapeutico — cosmetica non può promettere questo"),
+    (r"\b100\s?%\s*natural(e|i)?\b|\btotalmente naturale\b|\bcompletamente naturale\b|\b100%\s*natural\b",
+     "claim naturale assoluto — il dato reale documentato è 99% di origine naturale"),
+]
+
+
+def _find(testo: str, patterns, livello: str, regola: str) -> list[Violazione]:
+    out = []
+    for pat, dettaglio in patterns:
+        m = re.search(pat, testo, re.IGNORECASE)
+        if m:
+            out.append(Violazione(livello, regola, dettaglio, m.group(0).strip()))
+    return out
+
+
+def _negozio_ammesso(testo: str, frase: str) -> bool:
+    basso = testo.lower()
+    idx = basso.find(frase.lower())
+    finestra = basso[max(0, idx - 60): idx + len(frase) + 25]
+    return any(re.search(p, finestra) for p in NEGOZIO_AMMESSO)
+
+
+def _claim_ammesso(testo: str, span: tuple[int, int]) -> bool:
+    inizio = max(0, span[0] - 30)
+    fine = min(len(testo), span[1] + 30)
+    intorno = testo[inizio:fine]
+    return any(p.search(intorno) for p in _CLAIM_AMMESSI_CONTESTO)
+
+
+def lint_pubblicazione(testo: str, canale: str = "generico") -> LintResult:
+    """Linter completo su un testo destinato alla pubblicazione (caption, copy
+    secondario, alt-text). Va chiamato SEMPRE prima di mettere in coda un post,
+    anche in DRY-RUN — il linter non è un effetto collaterale della pubblicazione
+    vera, è un controllo indipendente da essa.
+    """
+    if not testo or not testo.strip():
+        return LintResult(ok=False, violazioni=[Violazione(BLOCK, "vuoto", "testo vuoto o assente")])
+
+    v: list[Violazione] = []
+    v += _find(testo, PREZZO_PATTERNS, BLOCK, "prezzi-e-cifre-commerciali")
+    v += _find(testo, PREZZO_NUDO, WARN, "prezzo-nominato")
+    v += _find(testo, M29_PATTERNS, BLOCK, "firewall-metodo-29")
+    v += _find(testo, CLAIM_ASSOLUTO_PATTERNS, BLOCK, "claim-non-documentato")
+
+    for viol in _find(testo, NEGOZIO_PATTERNS, BLOCK, "lessico-da-negozio"):
+        if not _negozio_ammesso(testo, viol.frase):
+            v.append(viol)
+
+    # claim numerici: BLOCK solo se la cifra NON è nel perimetro whitelisted
+    for pat, dettaglio in CLAIM_QUANTIFICATO:
+        for m in re.finditer(pat, testo, re.IGNORECASE):
+            if not _claim_ammesso(testo, m.span()):
+                v.append(Violazione(BLOCK, "claim-numerico-non-documentato", dettaglio, m.group(0).strip()))
+
+    ok = not any(x.livello == BLOCK for x in v)
+    return LintResult(ok=ok, violazioni=v)

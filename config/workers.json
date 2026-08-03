@@ -1,0 +1,11 @@
+{
+  "_nota": "Configurazione NON segreta dei worker — destinatari e identità attese. I segreti veri (chiavi API, password SMTP) vivono SOLO in .env, mai qui. Stesso principio di centralino.json nel centralino-vapi: qui le SCELTE, in .env i SEGRETI.",
+
+  "report_email": "",
+  "report_telegram_chat": "",
+  "telegram_bot_id": "",
+
+  "zernio_account_ids_sheis": {
+    "_nota": "VUOTO DI PROPOSITO — fatto misurato 2026-08-03: la chiave Zernio vede SOLO 2 account, entrambi Alkemia (facebook alkemia.marketing, instagram andrei_arsinte). Nessun account SHEis esiste ancora su Zernio. Finché questa mappa resta vuota, publisher_zernio.py blocca OGNI pubblicazione per mancanza di account SHEis — è il comportamento corretto, non un bug. Quando Mauro collega gli account SHEis via OAuth su Zernio, aggiungere qui: {\"instagram\": \"<id account SHEis>\", \"facebook\": \"<id account SHEis>\"}."
+  }
+}

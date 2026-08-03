@@ -1,0 +1,15 @@
+[Unit]
+Description=SHEis Workers — publisher_zernio (pubblicazione contenuti approvati)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=alkemia
+WorkingDirectory=/home/alkemia/sheis-workers
+EnvironmentFile=/home/alkemia/sheis-workers/.env
+# ⚠️ LIVE=1 va messo QUI (o in .env) solo dopo che publisher_zernio.py è stato
+# collaudato in simulazione e Mauro ha collegato gli account SHEis su Zernio.
+ExecStart=/usr/bin/python3 /home/alkemia/sheis-workers/publisher_zernio.py
+StandardOutput=journal
+StandardError=journal

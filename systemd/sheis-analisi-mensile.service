@@ -1,0 +1,13 @@
+[Unit]
+Description=SHEis Workers — analisi_mensile (mercato + trend, ScrapeCreators + DataForSEO)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=alkemia
+WorkingDirectory=/home/alkemia/sheis-workers
+EnvironmentFile=/home/alkemia/sheis-workers/.env
+ExecStart=/usr/bin/python3 /home/alkemia/sheis-workers/analisi_mensile.py
+StandardOutput=journal
+StandardError=journal
