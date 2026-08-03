@@ -131,9 +131,20 @@
     ]
   },
 
+  "_vocabolario_canonico": {
+    "_perche": "⚠️ Aggiunto il 2026-08-03 dopo una divergenza misurata. Questo file usava il trattino BASSO per i pubblici (distributore_estero) mentre lo Studio usava il trattino (distributore-estero), e il piano editoriale — che segue questo file — mescolava le due convenzioni nello stesso documento: trattino basso per il pubblico, trattino per il brand. Trenta contenuti reali sarebbero stati invisibili a ogni filtro dell'interfaccia. Nessun errore, nessun avviso: righe che semplicemente non compaiono. Da qui in avanti la convenzione è UNA: sempre il trattino, mai il trattino basso, come già facevano i brand.",
+    "pubblico": ["distributore-estero", "distributore-italia", "salone"],
+    "brand": ["sheis-color", "babilon", "younic"],
+    "formato": ["statico", "carosello", "video", "ugc"],
+    "formato_nota": "«video» indica sempre un Reel. I valori sono quelli ammessi dal vincolo del database, non una tassonomia libera.",
+    "canale": ["instagram", "facebook", "tiktok", "linkedin"],
+    "lingua": ["it", "en", "es"],
+    "regola": "Chi scrive un valore fuori da questi elenchi produce una riga che nessun filtro troverà. Il vincolo CHECK sul database (migrazione 0004) lo impedisce a valle; questo elenco lo impedisce a monte."
+  },
+
   "pubblici": {
-    "distributore_estero": { "priorita": 1, "lingua": ["en", "es"], "nota": "priorità commerciale numero uno dichiarata da Mauro; beachhead Spagna [DA CONFERMARE]" },
-    "distributore_italia": { "priorita": 2, "lingua": ["it"] },
+    "distributore-estero": { "priorita": 1, "lingua": ["en", "es"], "nota": "priorità commerciale numero uno dichiarata da Mauro; beachhead Spagna [DA CONFERMARE]" },
+    "distributore-italia": { "priorita": 2, "lingua": ["it"] },
     "salone": { "priorita": 3, "lingua": ["it"], "vincolo": "Gate zone esclusive: un salone in zona coperta si instrada al distributore di zona, non gli si vende." }
   },
 

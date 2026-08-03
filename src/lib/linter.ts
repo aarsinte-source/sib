@@ -127,15 +127,70 @@ function checkFirewallM29(testo: string): ViolazioneLinter[] {
 /** Regola 4 — claim numerici non documentati (best-effort: vedi commento sopra). */
 function checkNumeriNonDocumentati(testo: string): ViolazioneLinter[] {
   const numeriAmmessi = new Set(["15", "99", "3", "tre"]);
-  const pattern = /\b(\d+(?:[.,]\d+)?)\s*(minuti|minuto|%|percento|per\s*cento|fasi|fase|clienti|cliente|follower|anni|anno|ore|ora|giorni|giorno|nuance|tonalità)\b/giu;
+  // ⚠️ Il `\b` finale NON può applicarsi a "%": misurato il 2026-08-03.
+  // "%" non è un carattere di parola, quindi `%\b` pretende che subito dopo ci sia
+  // una lettera — cioè intercetta "100%naturale" e lascia passare "100% naturale",
+  // che è il modo in cui chiunque lo scrive davvero. Il caso reale sfuggiva, quello
+  // da manuale veniva bloccato. Ora "%" sta in un ramo senza `\b`, e le parole
+  // conservano il loro confine.
+  const pattern = /\b(\d+(?:[.,]\d+)?)\s*(?:(%|percento|per\s*cento)|(minuti|minuto|fasi|fase|clienti|cliente|follower|anni|anno|ore|ora|giorni|giorno|nuance|tonalità)\b)/giu;
   const trovate: ViolazioneLinter[] = [];
   let m: RegExpExecArray | null;
   while ((m = pattern.exec(testo)) !== null) {
     const numero = m[1];
+    const unita = m[2] ?? m[3] ?? "";
     if (!numeriAmmessi.has(numero)) {
       trovate.push({
         regola: "numero_non_documentato",
-        descrizione: `Numero "${numero}" accostato a "${m[2]}" non è nell'elenco dei dati documentati (15 minuti di posa, 99% naturale, 3 fasi YOUNIC) — marca [DA CONFERMARE] o rimuovi`,
+        descrizione: `Numero "${numero}" accostato a "${unita}" non è nell'elenco dei dati documentati (15 minuti di posa, 99% naturale, 3 fasi YOUNIC) — marca [DA CONFERMARE] o rimuovi`,
+        frase: estraiContesto(testo, m.index, m[0].length),
+      });
+    }
+  }
+  return trovate;
+}
+
+/** Regola 6 — claim assoluti, clinici e garanzie.
+ *
+ * ⚠️ Regola MANCANTE fino al 2026-08-03, trovata confrontando questo linter con
+ * quello dei worker: «BABILON è una linea 100% naturale» passava qui e veniva
+ * bloccato là. Due filtri dello stesso sistema con verdetti opposti sullo stesso
+ * testo sono peggio di un filtro assente, perché nessuno dei due sembra rotto.
+ *
+ * Perché sono vietati, al di là della coerenza fra strumenti: sono affermazioni
+ * che l'azienda non può dimostrare. «99% di origine naturale» è documentato e
+ * passa; «100% naturale» non lo è. In cosmetica un claim di questo tipo non è
+ * una sfumatura di marketing — è un'affermazione contestabile.
+ */
+const CLAIM_ASSOLUTI: readonly { re: RegExp; cosa: string }[] = [
+  { re: /\b100\s*%/giu,                                                    cosa: "«100%» — nessun dato documentato lo sostiene (il valore verificato è 99% di origine naturale)" },
+  { re: /\bclinicamente\s+(provat|testat|dimostrat)\w*/giu,                cosa: "claim clinico" },
+  { re: /\bdermatologicamente\s+provat\w*/giu,                             cosa: "claim clinico (il documentato è «dermatologicamente testato», non «provato»)" },
+  { re: /\brisultat\w*\s+garantit\w*/giu,                                  cosa: "garanzia di risultato" },
+  { re: /\bgarantiam\w+\b/giu,                                             cosa: "garanzia di risultato" },
+  // ⚠️ Servono le parole in mezzo: «il migliore PRODOTTO del mercato» è la forma
+  // naturale, «il migliore del mercato» quella da manuale. Senza il tratto libero
+  // si intercetta solo la seconda — lo stesso errore del "%" qui sopra, dove il
+  // caso reale sfuggiva e quello di scuola veniva preso.
+  { re: /\bmiglior\w*\b[^.!?]{0,30}\b(del|sul)\s+mercato/giu,               cosa: "superlativo assoluto non dimostrabile" },
+  // «più» si scrive con l'accento (U+00F9), non con l'apostrofo: cercare `piu'`
+  // avrebbe intercettato solo chi lo digita male. Si accettano entrambe le forme.
+  { re: /\b(?:il|la)\s+pi(?:ù|u['’])\s+[^.!?]{0,30}\b(?:del|sul)\s+mercato/giu, cosa: "superlativo assoluto non dimostrabile" },
+  { re: /\b(numero\s*uno|n\.?\s*1)\s+(in|del|sul)\b/giu,                   cosa: "primato non dimostrabile" },
+  { re: /\bl['’]?unic\w+\s+(prodotto|linea|marchio|azienda)\b/giu,         cosa: "esclusività non dimostrabile" },
+  { re: /\bcura\s+(la|il|i|le)\s+\w+/giu,                                  cosa: "possibile claim terapeutico — un cosmetico non cura" },
+  { re: /\b(senza\s+alcun|zero)\s+(effett\w+\s+collateral\w+|rischi\w*)/giu, cosa: "assenza assoluta di rischi" },
+];
+
+function checkClaimAssoluti(testo: string): ViolazioneLinter[] {
+  const trovate: ViolazioneLinter[] = [];
+  for (const { re, cosa } of CLAIM_ASSOLUTI) {
+    re.lastIndex = 0;
+    const m = re.exec(testo);
+    if (m) {
+      trovate.push({
+        regola: "claim_assoluto_o_clinico",
+        descrizione: `Claim non dimostrabile: ${cosa} — riformula su un dato documentato o marca [DA CONFERMARE]`,
         frase: estraiContesto(testo, m.index, m[0].length),
       });
     }
@@ -173,6 +228,7 @@ export function lintContenuto(
     ...checkLessicoNegozio(testo),
     ...checkFirewallM29(testo),
     ...checkNumeriNonDocumentati(testo),
+    ...checkClaimAssoluti(testo),
     ...checkNomiSenzaConsenso(testo, opzioni.nomiSenzaConsenso ?? []),
   ];
 
@@ -186,6 +242,7 @@ export function lintTesto(testo: string, opzioni: OpzioniLint = {}): EsitoLinter
     ...checkLessicoNegozio(testo),
     ...checkFirewallM29(testo),
     ...checkNumeriNonDocumentati(testo),
+    ...checkClaimAssoluti(testo),
     ...checkNomiSenzaConsenso(testo, opzioni.nomiSenzaConsenso ?? []),
   ];
   return { bloccato: violazioni.length > 0, violazioni };
