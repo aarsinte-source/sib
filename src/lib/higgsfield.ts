@@ -1,4 +1,8 @@
 import "server-only";
+import { spawn } from "node:child_process";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+import { scegli, formatoPer, GATE } from "@/lib/modelli-creativi";
 import type { Brand, Formato } from "@/lib/brand";
 import { BRAND_LABEL, VALORI_ASSE, asseVarianteDeterministico, type AsseVariante } from "@/lib/brand";
 import {
@@ -92,91 +96,215 @@ export type EsitoGenerazione =
   | { ok: false; errore: string; tettoRaggiunto: boolean };
 
 /**
- * Tenta la generazione reale su Higgsfield. Con la configurazione odierna
- * (nessuna HIGGSFIELD_API_KEY) restituisce SEMPRE il degrado dichiarato.
+ * Genera davvero su Higgsfield, passando dalla CLI.
+ *
+ * ⚠️ Perché la CLI e non l'API diretta. Prima questa funzione chiamava
+ * `fnf.higgsfield.ai` con HIGGSFIELD_API_KEY e HIGGSFIELD_API_SECRET — due
+ * variabili che nessuno ha mai avuto, quindi la funzione rispondeva SEMPRE
+ * «non collegato» e nessuna creatività è mai uscita. Higgsfield non autentica
+ * con una chiave statica: la CLI conserva una coppia di token che si rinnova
+ * da sola, ed è già collegata all'account. Una chiave copiata a mano
+ * scadrebbe; questa no.
+ *
+ * ⚠️ Il modello NON è più scritto qui. Viene dal catalogo misurato
+ * (`modelli-creativi.ts`, generato dalla fonte): «grafica» → Nano Banana Pro,
+ * «ugc-video» → Seedance 2.0, e così via. Prima era `gpt_image_2` per
+ * qualunque cosa: 7 crediti contro 2, più lento, e migliore in niente.
  */
 export async function generaImmagine(
   prompt: string,
   qualita: QualitaImmagine,
+  opzioni: { lavoro?: string; canale?: string } = {},
 ): Promise<EsitoGenerazione> {
-  const apiKey = process.env.HIGGSFIELD_API_KEY;
-  const apiSecret = process.env.HIGGSFIELD_API_SECRET;
-  const crediti = CREDITI_PER_VARIANTE[qualita];
-  const eur = Math.round(crediti * COSTO_EUR_PER_CREDITO * 100) / 100;
+  const lavoro = opzioni.lavoro ?? (qualita === "2k_high" ? "grafica" : "grafica-bozza");
 
-  if (!apiKey || !apiSecret) {
-    return {
-      ok: false,
-      tettoRaggiunto: false,
-      errore:
-        "Higgsfield non è collegato in questo ambiente: mancano HIGGSFIELD_API_KEY e HIGGSFIELD_API_SECRET nelle variabili del server. " +
-        "Il prompt e il costo stimato restano pronti; la generazione reale può partire da un worker con quelle credenziali.",
-    };
-  }
-
+  let scelta: ReturnType<typeof scegli>;
   try {
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 60_000);
-    let r: Response;
-    try {
-      r = await fetch("https://fnf.higgsfield.ai/agents/jobs", {
-        method: "POST",
-        headers: {
-          "hf-api-key": apiKey,
-          "hf-secret": apiSecret,
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "gpt_image_2",
-          params: { prompt, quality: qualita === "2k_high" ? "high" : "low", resolution: qualita === "2k_high" ? "2k" : "1k" },
-        }),
-        signal: ctrl.signal,
-      });
-    } finally {
-      clearTimeout(timer);
-    }
-
-    const testo = await r.text();
-    let corpo: Record<string, unknown> = {};
-    try {
-      corpo = JSON.parse(testo) as Record<string, unknown>;
-    } catch {
-      /* risposta non JSON: gestita sotto come errore generico */
-    }
-
-    if (!r.ok) {
-      const errorType = typeof corpo.error_type === "string" ? corpo.error_type : undefined;
-      if (errorType === "grace_daily_limit_reached") {
-        return {
-          ok: false,
-          tettoRaggiunto: true,
-          errore:
-            "Higgsfield ha raggiunto il tetto giornaliero di generazioni (oltre i crediti disponibili). " +
-            "Questa variante resta in errore; le altre in coda non partono. Riprova domani.",
-        };
-      }
-      return {
-        ok: false,
-        tettoRaggiunto: false,
-        errore: `Higgsfield ha risposto ${r.status}: ${testo.slice(0, 200) || "nessun dettaglio"}.`,
-      };
-    }
-
-    const assetUrl = typeof corpo.url === "string" ? corpo.url : typeof corpo.asset_url === "string" ? corpo.asset_url : "";
-    if (!assetUrl) {
-      return {
-        ok: false,
-        tettoRaggiunto: false,
-        errore: "Higgsfield ha risposto senza un URL di asset utilizzabile. Verifica manualmente il job.",
-      };
-    }
-
-    return { ok: true, assetUrl, costoCrediti: crediti, costoEur: eur };
+    scelta = scegli(lavoro);
   } catch (e) {
     return {
       ok: false,
       tettoRaggiunto: false,
-      errore: `Errore di rete verso Higgsfield: ${e instanceof Error ? e.message : "sconosciuto"}. Riprova.`,
+      errore: e instanceof Error ? e.message : "Lavoro creativo non riconosciuto.",
     };
   }
+
+  const crediti = scelta.crediti;
+  const eur = Math.round(crediti * COSTO_EUR_PER_CREDITO * 100) / 100;
+
+  const cli = trovaCli();
+  if (!cli) {
+    return {
+      ok: false,
+      tettoRaggiunto: false,
+      errore:
+        "La riga di comando Higgsfield non è raggiungibile da questo server. " +
+        "Si installa con `npm i -g @higgsfield/cli` e si collega con `higgsfield auth login`; " +
+        "se è installata altrove, imposta HIGGSFIELD_CLI sul percorso. " +
+        "Il prompt e il costo stimato restano pronti: non si perde nulla di quanto già deciso.",
+    };
+  }
+
+  const parametri: string[] = ["--prompt", prompt];
+  for (const [k, v] of Object.entries(scelta.parametri)) {
+    parametri.push(`--${k}`, String(v));
+  }
+  // Il formato viene dal posto dove il contenuto verrà visto, non da una
+  // preferenza: una grafica quadrata dentro una storia lascia due bande vuote.
+  // Il canale VINCE sul default del catalogo — il default serve a quando il
+  // canale non si sa, non a sovrascriverlo quando si sa.
+  if (opzioni.canale) {
+    const f = formatoPer(opzioni.canale);
+    if (f !== "auto") {
+      const i = parametri.indexOf("--aspect_ratio");
+      if (i >= 0) parametri[i + 1] = f;
+      else parametri.push("--aspect_ratio", f);
+    }
+  }
+
+  const esito = await esegui(cli, ["generate", "create", scelta.modello, ...parametri, "--wait", "--json"]);
+
+  if (!esito.ok) {
+    // ⚠️ Un fallimento QUI non significa che il lavoro non sia stato fatto.
+    // Misurato il 3/8 su un video: il comando è uscito con HTTP 502 mentre
+    // aspettava l'esito, e intanto il video era stato prodotto e 22 crediti
+    // addebitati. Dichiarare fallimento dopo aver speso è il modo più costoso
+    // di sbagliare: chi legge rigenera, e paga due volte la stessa cosa.
+    const recuperato = await recuperaJobRecente(cli, scelta.modello);
+    if (recuperato) {
+      return { ok: true, assetUrl: recuperato, costoCrediti: crediti, costoEur: eur };
+    }
+    // Il tetto giornaliero è una cosa diversa dall'aver finito i crediti: si
+    // può avere saldo e vedersi rifiutare la generazione lo stesso. Chi legge
+    // deve sapere se aspettare domani o ricaricare.
+    const tetto = GATE.marcatori_tetto_giornaliero.some((m) =>
+      esito.uscita.toLowerCase().includes(m.toLowerCase()),
+    );
+    return {
+      ok: false,
+      tettoRaggiunto: tetto,
+      errore: tetto
+        ? `Higgsfield ha raggiunto il tetto giornaliero di generazioni — è un limite di ritmo, non di crediti: il saldo può essere ancora capiente. Le varianti in coda non partono. Riprova domani. (${scelta.nome_umano})`
+        : `Higgsfield non ha completato la generazione con ${scelta.nome_umano}: ${esito.uscita.slice(0, 240) || "nessun dettaglio"}`,
+    };
+  }
+
+  const assetUrl = estraiUrl(esito.uscita);
+  if (!assetUrl) {
+    return {
+      ok: false,
+      tettoRaggiunto: false,
+      errore:
+        `${scelta.nome_umano} ha completato il lavoro ma non ha restituito un indirizzo utilizzabile. ` +
+        `Il job esiste: si recupera con \`higgsfield generate list\`.`,
+    };
+  }
+
+  return { ok: true, assetUrl, costoCrediti: crediti, costoEur: eur };
+}
+
+/**
+ * L'ultimo lavoro COMPLETATO con questo modello, se è appena successo.
+ *
+ * Serve dopo un'attesa caduta: il lavoro può essere andato a buon fine e
+ * l'addebito essere già avvenuto. Si limita alla finestra recente e allo
+ * stesso modello — meglio nessun recupero che l'asset sbagliato.
+ */
+async function recuperaJobRecente(cli: string, modello: string, entroSecondi = 900): Promise<string | null> {
+  const r = await esegui(cli, ["generate", "list", "--json"]);
+  if (!r.ok) return null;
+  const i = r.uscita.search(/[[{]/);
+  if (i < 0) return null;
+  let dati: unknown;
+  try {
+    dati = JSON.parse(r.uscita.slice(i));
+  } catch {
+    return null;
+  }
+  if (!Array.isArray(dati)) return null;
+  const adesso = Date.now() / 1000;
+  for (const j of dati as Record<string, unknown>[]) {
+    if (j?.job_set_type !== modello || j?.status !== "completed") continue;
+    const creato = j.created_at;
+    if (typeof creato === "number" && adesso - creato > entroSecondi) continue;
+    const url = typeof j.result_url === "string" ? j.result_url : cercaUrl(j);
+    if (url) return url;
+  }
+  return null;
+}
+
+function trovaCli(): string | null {
+  const candidati = [
+    process.env.HIGGSFIELD_CLI,
+    join(process.env.HOME ?? "", ".npm-global", "bin", "higgsfield"),
+    "/usr/local/bin/higgsfield",
+    "/opt/homebrew/bin/higgsfield",
+  ].filter(Boolean) as string[];
+  return candidati.find((p) => existsSync(p)) ?? null;
+}
+
+function esegui(cli: string, argomenti: string[]): Promise<{ ok: boolean; uscita: string }> {
+  return new Promise((risolvi) => {
+    const p = spawn(cli, argomenti, { env: { ...process.env, NO_COLOR: "1" } });
+    let uscita = "";
+    p.stdout.on("data", (d) => (uscita += d.toString()));
+    p.stderr.on("data", (d) => (uscita += d.toString()));
+    p.on("error", (e) => risolvi({ ok: false, uscita: `la riga di comando non è partita: ${e.message}` }));
+    // Un video può richiedere minuti: il limite è generoso ma esiste, perché
+    // un'attesa senza fine in un'interfaccia web è indistinguibile da un guasto.
+    const timer = setTimeout(() => {
+      p.kill();
+      risolvi({ ok: false, uscita: "la generazione ha superato i 10 minuti ed è stata interrotta" });
+    }, 600_000);
+    p.on("close", (codice) => {
+      clearTimeout(timer);
+      risolvi({ ok: codice === 0, uscita });
+    });
+  });
+}
+
+/**
+ * L'indirizzo dell'asset, comunque la CLI decida di chiamarlo.
+ *
+ * ⚠️ La CLI stampa JSON INDENTATO su più righe (verificato su una generazione
+ * vera: la risposta è un array, la chiave è `result_url`). Cercare una riga che
+ * sia JSON completo non trova mai niente — si finiva a pescare l'indirizzo con
+ * un'espressione regolare, che funziona finché il formato non cambia di poco.
+ * Qui si prova prima a leggere l'output INTERO come JSON, che è ciò che è.
+ */
+function estraiUrl(uscita: string): string | null {
+  const inizio = uscita.search(/[[{]/);
+  if (inizio >= 0) {
+    try {
+      const trovato = cercaUrl(JSON.parse(uscita.slice(inizio)) as unknown);
+      if (trovato) return trovato;
+    } catch {
+      /* preambolo o coda non JSON: si prova il ripiego sotto */
+    }
+  }
+  // Ripiego: un indirizzo nudo nell'output. Meglio di un fallimento quando
+  // l'unica cosa che manca è la forma esatta della risposta.
+  return uscita.match(/https?:\/\/\S+\.(?:png|jpe?g|webp|mp4|mov)/i)?.[0] ?? null;
+}
+
+function cercaUrl(o: unknown): string | null {
+  if (typeof o === "string") return /^https?:\/\//.test(o) ? o : null;
+  if (Array.isArray(o)) {
+    for (const v of o) {
+      const t = cercaUrl(v);
+      if (t) return t;
+    }
+    return null;
+  }
+  if (o && typeof o === "object") {
+    const d = o as Record<string, unknown>;
+    for (const chiave of ["url", "asset_url", "output_url", "result_url", "download_url"]) {
+      if (typeof d[chiave] === "string" && /^https?:\/\//.test(d[chiave] as string)) return d[chiave] as string;
+    }
+    for (const v of Object.values(d)) {
+      const t = cercaUrl(v);
+      if (t) return t;
+    }
+  }
+  return null;
 }
