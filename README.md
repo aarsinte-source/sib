@@ -41,8 +41,9 @@ Verificato, non ipotizzato (rilancia `node stato_accessi.mjs` per la versione se
 | `campagna_da_brief.mjs` (media buyer su richiesta) | **Costruito e funzionante in simulazione.** Nessuna chiamata reale a Meta è possibile finché manca l'account. |
 | `attiva.mjs` (attivazione guidata) + `prova-a-secco.mjs` (prova a secco end-to-end) | **Costruiti e testati.** Vedi `PRONTI-AL-LANCIO.md`. |
 | Linter di brand (`lib/guardrails.mjs`) | **Legge le liste direttamente da `BRAND-IDENTITY_sheis_2026-08-03.json`** (non le duplica più a mano): copertura IT/EN/ES/FR/DE/PL/PT/AR, confronto per radice, regola sui claim numerici, eccezione per le negazioni brand-safe. Regressione coperta da `test-guardrails.mjs`. |
-| ⚠️ Tetto di spesa aggregato | I 3 blueprint **insieme** costano 1.003,20 EUR/mese, **3,20 EUR sopra** il tetto dichiarato (1.000). `node launch.mjs` senza `--only` si rifiuta di partire (anche in anteprima). Si lancia sempre con `--only`, nella sequenza a fasi di cui sotto — non è un difetto da correggere nei numeri, è il motivo per cui la sequenza esiste. |
-| Tabella `sheis_campagne` (Supabase, SHEis Studio) | **Non ancora esistente.** `campagna_da_brief.mjs` scrive nel frattempo in `.campagne/registro.json` (stessa forma dei record) — vedi `lib/campagne-store.mjs`, unica porta verso lo storage: passare al DB richiede solo le due variabili d'ambiente, nessun altro file da toccare. |
+| ⚠️ Tetto di spesa aggregato | I 3 blueprint **insieme** costano 1.003,20 EUR/mese, **3,20 EUR sopra** il tetto dichiarato (1.000). In anteprima è solo un avviso (di proposito: un freno che impedisce di guardare non protegge niente); in `--live` blocca sul serio. Si lancia sempre con `--only`, nella sequenza a fasi di cui sotto. |
+| ⚠️ `leads_retrieval` mancante sul token | **Verificato eseguendo** (non solo dichiarato) il 2026-08-03: il token disponibile elenca i moduli lead ma non riesce a leggerne i lead dentro — `(#200) Requires leads_retrieval permission to manage the object`, riprodotto su tre pagine reali diverse. Tocca `A-estero-spagna` e `B-italia-distributori` (moduli nativi ON_AD), non `C` (awareness). Due vie, entrambe pronte: chiedere il permesso (revisione Meta) o usare le varianti `*-web` (`blueprints/A-estero-spagna-web.json`, `B-italia-distributori-web.json`, destination_type WEBSITE → `~/alkemia-sheis-web/api/distributori-lead` → `sheis_lead_ads`). Verificato da `lib/leads-check.mjs`, cablato in `preflight.mjs`/`attiva.mjs`. Dettagli in `PRONTI-AL-LANCIO.md`. |
+| Tabella `sheis_campagne` / `sheis_lead_ads` (Supabase) | **Non ancora esistenti.** Serve un Personal Access Token Supabase (`sbp_...`) per applicare le migrazioni (`~/alkemia-sheis-backend/applica_migrazioni.py`) — un prerequisito umano leggero, non un difetto di codice. Nel frattempo `campagna_da_brief.mjs` scrive in `.campagne/registro.json` — vedi `lib/campagne-store.mjs`, unica porta verso lo storage: passare al DB richiede solo le due variabili d'ambiente, nessun altro file da toccare. |
 
 **Traduzione onesta:** il lavoro creativo e strategico è finito, e ora anche il motore che trasforma
 un brief in una campagna. Il blocco è puramente di accessi, e non dipende da noi. Non è una stima
@@ -359,6 +360,7 @@ La campagna B vale come rinforzo, e va raccontata a Mauro per quello che è.
 ├── test-guardrails.mjs               regressione del linter di brand (node --test)
 ├── test-meta-api.mjs                 regressione del gate valuta/fuso (node --test)
 ├── test-brief-parser.mjs             regressione del parser brief (node --test)
+├── test-leads-check.mjs              regressione del controllo di consegna lead (node --test)
 ├── config.example.json               da copiare in config.local.json
 ├── config.local.json                 token e ID — GITIGNORATO, mai committare
 ├── lib/                              logica condivisa dai tre script sopra — un solo posto, non tre
@@ -373,12 +375,15 @@ La campagna B vale come rinforzo, e va raccontata a Mauro per quello che è.
 │   ├── campagne-store.mjs            unica porta verso sheis_campagne (Supabase, con fallback locale)
 │   ├── checklist-accessi.mjs         checklist canonica — la stessa che vedi nella sezione 1
 │   ├── brief-parser.mjs              brief in linguaggio naturale → segnali strutturati (regole, non LLM)
-│   ├── blueprint-selector.mjs        punteggio 0-100 per scegliere il blueprint più adatto
-│   └── campaign-builder.mjs          blueprint + segnali → campagna personalizzata + payload
+│   ├── blueprint-selector.mjs        punteggio 0-100 per scegliere il blueprint più adatto + soloPrimari/soloVarianti
+│   ├── campaign-builder.mjs          blueprint + segnali → campagna personalizzata + payload
+│   └── leads-check.mjs               consegna lead ESEGUITA (non dichiarata) — vedi PRONTI-AL-LANCIO.md
 ├── blueprints/
-│   ├── A-estero-spagna.json
-│   ├── B-italia-distributori.json
-│   └── C-saloni-awareness.json
+│   ├── A-estero-spagna.json           nativo ON_AD — richiede leads_retrieval
+│   ├── A-estero-spagna-web.json       VARIANTE destination_type WEBSITE — non richiede leads_retrieval
+│   ├── B-italia-distributori.json     nativo ON_AD — richiede leads_retrieval
+│   ├── B-italia-distributori-web.json VARIANTE destination_type WEBSITE — non richiede leads_retrieval
+│   └── C-saloni-awareness.json        OUTCOME_AWARENESS — non tocca leads_retrieval
 ├── .campagne/                        GITIGNORATO — registro locale + JSON ispezionabili per brief
 └── .runs/                            registro degli ID creati da launch.mjs --live, per rollback
 ```

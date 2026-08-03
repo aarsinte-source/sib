@@ -31,7 +31,7 @@ import { dirname, join } from 'node:path';
 
 import { C, ok, warn, fail, info, title } from './lib/ui.mjs';
 import { analizzaBrief } from './lib/brief-parser.mjs';
-import { scegliBlueprint } from './lib/blueprint-selector.mjs';
+import { scegliBlueprint, soloPrimari } from './lib/blueprint-selector.mjs';
 import { costruisciCampagna } from './lib/campaign-builder.mjs';
 import { controllaBudget, GIORNI_MESE } from './lib/budget.mjs';
 import { salvaCampagna, elencaCampagne, STATI_CHE_PESANO_SUL_BUDGET, dbAttivo } from './lib/campagne-store.mjs';
@@ -112,7 +112,10 @@ async function main() {
   const files = (await readdir(BLUEPRINT_DIR)).filter((f) => f.endsWith('.json')).sort();
   const blueprints = await Promise.all(files.map(async (f) => JSON.parse(await readFile(join(BLUEPRINT_DIR, f), 'utf8'))));
 
-  const { scelto, classifica, sogliaMinima } = scegliBlueprint(blueprints, segnali);
+  // Le varianti (es. "-web") restano fuori dalla scelta automatica: sono
+  // alternative dello stesso obiettivo commerciale, non candidate proprie —
+  // si selezionano solo esplicitamente (oggi: solo via launch.mjs --only).
+  const { scelto, classifica, sogliaMinima } = scegliBlueprint(soloPrimari(blueprints), segnali);
 
   title('SCELTA DEL BLUEPRINT — perche\'');
   for (const v of classifica) {
@@ -192,7 +195,7 @@ async function main() {
   const { righe: campagneEsistenti, sorgente: sorgenteStore } = await elencaCampagne({ stati: STATI_CHE_PESANO_SUL_BUDGET }, config);
   const spesaCampagneRegistrateEur = campagneEsistenti.reduce((s, r) => s + (r.budget_totale ?? (r.budget_giorno ? r.budget_giorno * GIORNI_MESE : 0)), 0);
 
-  const spesaStaticaKitEur = blueprints.reduce((s, b) => s + (b.budget?.monthly_eur_est ?? 0), 0);
+  const spesaStaticaKitEur = soloPrimari(blueprints).reduce((s, b) => s + (b.budget?.monthly_eur_est ?? 0), 0);
 
   title('TETTO DI SPESA — doppio controllo');
   info(`Insieme sommato per il controllo: campagne registrate (${sorgenteStore}) in stato ${STATI_CHE_PESANO_SUL_BUDGET.join('/')} — oggi ${campagneEsistenti.length}, ${spesaCampagneRegistrateEur.toFixed(2)} EUR/mese — PIU' questa campagna.`);

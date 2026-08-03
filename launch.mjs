@@ -33,6 +33,7 @@ import { makeApi, normalizzaAdAccountId } from './lib/meta-api.mjs';
 import { preflight, BloccoPreflight } from './lib/preflight.mjs';
 import { buildPayload, executePayload } from './lib/payload-builder.mjs';
 import { GIORNI_MESE, stampaPianoSpesa } from './lib/budget.mjs';
+import { soloPrimari } from './lib/blueprint-selector.mjs';
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
 const BLUEPRINT_DIR = join(ROOT, 'blueprints');
@@ -81,6 +82,15 @@ async function main() {
       console.log(`\n  ${C.red}BLOCCO${C.reset}  Nessun blueprint con id "${filtro}". Disponibili: ${files.join(', ')}`);
       process.exit(1);
     }
+  } else {
+    // Senza --only, le VARIANTI (destination_type diverso dello stesso
+    // obiettivo, es. "-web") restano fuori: sono alternative, non campagne
+    // aggiuntive — contarle nel piano di spesa insieme al blueprint primario
+    // conterebbe due volte lo stesso obiettivo commerciale. Restano
+    // lanciabili con --only <id-variante>, esplicitamente.
+    const escluse = blueprints.filter((b) => b.variante_di);
+    blueprints = soloPrimari(blueprints);
+    if (escluse.length) console.log(`${C.dim}Varianti escluse dal run senza --only: ${escluse.map((b) => b.id).join(', ')} (lanciabili con --only <id>)${C.reset}`);
   }
   console.log(`${C.dim}Blueprint caricati: ${blueprints.map((b) => b.id).join(', ')}${C.reset}`);
 
@@ -221,7 +231,7 @@ async function main() {
 async function validazioneOffline(filtro) {
   const files = (await readdir(BLUEPRINT_DIR)).filter((f) => f.endsWith('.json')).sort();
   let blueprints = await Promise.all(files.map(async (f) => JSON.parse(await readFile(join(BLUEPRINT_DIR, f), 'utf8'))));
-  if (filtro) blueprints = blueprints.filter((b) => b.id === filtro);
+  blueprints = filtro ? blueprints.filter((b) => b.id === filtro) : soloPrimari(blueprints);
 
   title('VALIDAZIONE OFFLINE (senza accessi)');
   let totGiorno = 0;

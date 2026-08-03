@@ -32,7 +32,7 @@ import { trovaPlaceholder, risolvi } from './lib/placeholders.mjs';
 import { buildPayload } from './lib/payload-builder.mjs';
 import { stampaPianoSpesa, GIORNI_MESE } from './lib/budget.mjs';
 import { analizzaBrief } from './lib/brief-parser.mjs';
-import { scegliBlueprint } from './lib/blueprint-selector.mjs';
+import { scegliBlueprint, soloPrimari, soloVarianti } from './lib/blueprint-selector.mjs';
 import { costruisciCampagna } from './lib/campaign-builder.mjs';
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
@@ -60,6 +60,8 @@ function creaValoriFinti() {
     GEO_LAT: '42.4618',
     GEO_LNG: '14.1697',
     'CUSTOM_AUDIENCE_ID:ateco-4645': `FAKE_CA_${prossimo()}`,
+    'LANDING_URL:distributori-es': 'https://esempio-dry-run.invalid/es/distributori',
+    'LANDING_URL:distributori-it': 'https://esempio-dry-run.invalid/it/distributori',
   };
 
   for (const nome of [
@@ -135,38 +137,44 @@ function verificaPlaceholderRisolti(risolto, id) {
   return [...rimasti.keys()].map((k) => `placeholder <<${k}>> ancora presente dopo la risoluzione (manca nei FINTI di questo script, id ${id})`);
 }
 
-// ── sezione 1: i 3 blueprint statici, percorso launch.mjs ───────────────────
+// Verifica strutturale unica: usata sia per i primari sia per le varianti,
+// stesso motore, nessuna divergenza fra i due percorsi.
+function verificaStrutturaBlueprint(bp) {
+  const blocchi = [];
+
+  const { errori, avvisi, giornalieroReale, mensileStimato } = validaBlueprint(bp, CONFIG_FINTO);
+  for (const a of avvisi) warn(a);
+  for (const e of errori) blocchi.push(`${e.tipo}: ${e.dettaglio.join(' | ')}`);
+
+  const risolto = risolvi(bp, FINTI);
+  blocchi.push(...verificaPlaceholderRisolti(risolto, bp.id));
+
+  let built = null;
+  try {
+    built = buildPayload(risolto);
+  } catch (e) {
+    blocchi.push(`buildPayload ha lanciato un'eccezione: ${e.message}`);
+  }
+  if (built) blocchi.push(...verificaCampiObbligatori(built));
+
+  blocchi.push(...verificaCollegamenti(bp));
+
+  return { blocchi, giornalieroReale, mensileStimato, errori };
+}
+
+// ── sezione 1: i 3 blueprint statici primari, percorso launch.mjs ──────────
 async function provaBlueprintStatici() {
-  title('1. BLUEPRINT STATICI (percorso launch.mjs) — con valori FINTI');
+  title('1. BLUEPRINT STATICI PRIMARI (percorso launch.mjs, default senza --only) — con valori FINTI');
   const files = (await readdir(BLUEPRINT_DIR)).filter((f) => f.endsWith('.json')).sort();
-  const blueprints = await Promise.all(files.map(async (f) => JSON.parse(await readFile(join(BLUEPRINT_DIR, f), 'utf8'))));
+  const tutti = await Promise.all(files.map(async (f) => JSON.parse(await readFile(join(BLUEPRINT_DIR, f), 'utf8'))));
+  const blueprints = soloPrimari(tutti);
 
   const voci = [];
   const esiti = [];
 
   for (const bp of blueprints) {
     console.log(`\n  ${C.bold}${bp.id}${C.reset} — ${bp.label}`);
-    const blocchi = [];
-
-    // a) motore condiviso — stesso di launch.mjs
-    const { errori, avvisi, giornalieroReale, mensileStimato } = validaBlueprint(bp, CONFIG_FINTO);
-    for (const a of avvisi) warn(a);
-    for (const e of errori) blocchi.push(`${e.tipo}: ${e.dettaglio.join(' | ')}`);
-
-    // b) risoluzione reale + payload esatto (esattamente come fa launch.mjs prima di creare)
-    const risolto = risolvi(bp, FINTI);
-    blocchi.push(...verificaPlaceholderRisolti(risolto, bp.id));
-
-    let built = null;
-    try {
-      built = buildPayload(risolto);
-    } catch (e) {
-      blocchi.push(`buildPayload ha lanciato un'eccezione: ${e.message}`);
-    }
-    if (built) blocchi.push(...verificaCampiObbligatori(built));
-
-    // c) collegamenti annuncio -> adset/creativita'
-    blocchi.push(...verificaCollegamenti(bp));
+    const { blocchi, giornalieroReale, mensileStimato, errori } = verificaStrutturaBlueprint(bp);
 
     if (blocchi.length) {
       fail(`${blocchi.length} ${blocchi.length === 1 ? 'blocco' : 'blocchi'}:`);
@@ -183,7 +191,36 @@ async function provaBlueprintStatici() {
   }
 
   const { sforato, totMese } = stampaPianoSpesa(voci, CONFIG_FINTO.monthly_budget_cap_eur ?? 1000);
-  return { esiti, sforato, totMese };
+
+  // ── 1b. varianti (destination_type diverso, stesso obiettivo commerciale) ──
+  // Fuori dal piano di spesa aggregato di proposito (soloPrimari sopra): non
+  // sono campagne aggiuntive, sono alternative — vedi lib/blueprint-selector.mjs.
+  const varianti = soloVarianti(tutti);
+  const esitiVarianti = [];
+  if (varianti.length) {
+    title('1b. VARIANTI WEBSITE (destination_type diverso, escluse dal tetto aggregato) — con valori FINTI');
+    for (const bp of varianti) {
+      console.log(`\n  ${C.bold}${bp.id}${C.reset} — ${bp.label}`);
+      console.log(`  ${C.dim}Variante di: ${bp.variante_di}${C.reset}`);
+      const { blocchi } = verificaStrutturaBlueprint(bp);
+
+      // Le varianti web non usano moduli lead nativi: nessun dettaglio in piu'
+      // da verificare qui oltre alla struttura standard (il controllo di
+      // consegna lead — lib/leads-check.mjs — le ignora di proposito, sono
+      // destination_type WEBSITE, non ON_AD).
+      if (blocchi.length) {
+        fail(`${blocchi.length} ${blocchi.length === 1 ? 'blocco' : 'blocchi'}:`);
+        for (const b of blocchi) console.log(`       - ${b}`);
+      } else {
+        ok('Nessun blocco strutturale.');
+        warn(`Dipendenza NON verificabile da questo script: la pagina/endpoint/tabella di destinazione esistono in codice ma non end-to-end (vedi 🔴_perche_esiste_questa_variante nel file). Non lanciare finche' un invio di prova reale non arriva in sheis_lead_ads.`);
+      }
+      console.log(`\n  ${blocchi.length === 0 ? `${C.yellow}${C.bold}STRUTTURALMENTE SI — ma verifica end-to-end la destinazione prima di spendere.${C.reset}` : `${C.red}${C.bold}NO — bloccato dai punti sopra.${C.reset}`}`);
+      esitiVarianti.push({ id: bp.id, ok: blocchi.length === 0, blocchi, richiedeVerificaEndToEnd: blocchi.length === 0 });
+    }
+  }
+
+  return { esiti, sforato, totMese, esitiVarianti };
 }
 
 // ── sezione 2: 3 brief rappresentativi, percorso campagna_da_brief.mjs ──────
@@ -205,7 +242,7 @@ async function provaBrief() {
     const blocchi = [];
 
     const segnali = analizzaBrief(testo);
-    const { scelto, classifica } = scegliBlueprint(blueprints, segnali);
+    const { scelto, classifica } = scegliBlueprint(soloPrimari(blueprints), segnali);
 
     if (!scelto) {
       blocchi.push(`nessun blueprint sopra soglia (migliore: ${classifica[0]?.punteggio ?? 0}/100)`);
@@ -257,7 +294,7 @@ async function main() {
   console.log(`${C.dim}SIMULAZIONE STRUTTURALE — nessuna chiamata a Meta. Ogni <<PLACEHOLDER>> e' sostituito${C.reset}`);
   console.log(`${C.dim}con un ID FINTO (prefisso FAKE_) solo per validare la FORMA del payload, mai per creare nulla.${C.reset}`);
 
-  const { esiti: esitiStatici, sforato, totMese } = await provaBlueprintStatici();
+  const { esiti: esitiStatici, sforato, totMese, esitiVarianti } = await provaBlueprintStatici();
   const esitiBrief = await provaBrief();
 
   title('VERDETTO GLOBALE');
@@ -265,6 +302,10 @@ async function main() {
   for (const e of esitiStatici) {
     if (e.ok) ok(`${e.id}: SI, PARTIREBBE (singolarmente, con --only).`);
     else { fail(`${e.id}: NO — ${e.blocchi.length} blocco/i.`); tuttoOk = false; }
+  }
+  for (const e of esitiVarianti) {
+    if (!e.ok) { fail(`${e.id}: NO — ${e.blocchi.length} blocco/i strutturali.`); tuttoOk = false; }
+    else warn(`${e.id}: struttura OK, ma destinazione NON verificata end-to-end (serve sheis_lead_ads live) — non e' un blocco di questo script, e' un prerequisito fuori dal suo perimetro.`);
   }
   for (const e of esitiBrief) {
     if (e.ok) ok(`brief "${e.testo.slice(0, 40)}…": SI, PARTIREBBE.`);

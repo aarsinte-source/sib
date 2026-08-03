@@ -33,6 +33,7 @@ import { C, ok, warn, fail, info, title } from './lib/ui.mjs';
 import { makeApi, normalizzaAdAccountId, STATI_ACCOUNT, verificaValutaEFuso } from './lib/meta-api.mjs';
 import { preflight, BloccoPreflight } from './lib/preflight.mjs';
 import { CHECKLIST, OBBLIGATORIE } from './lib/checklist-accessi.mjs';
+import { verificaConsegnaLead } from './lib/leads-check.mjs';
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
 const CONFIG_PATH = join(ROOT, 'config.local.json');
@@ -89,6 +90,9 @@ async function main() {
 
   const config = await caricaConfig();
   const rl = createInterface({ input: process.stdin, output: process.stdout });
+
+  const fileBlueprint = (await readdir(BLUEPRINT_DIR)).filter((f) => f.endsWith('.json')).sort();
+  const blueprints = await Promise.all(fileBlueprint.map(async (f) => JSON.parse(await readFile(join(BLUEPRINT_DIR, f), 'utf8'))));
 
   try {
     // ── 1. access_token ────────────────────────────────────────────────
@@ -247,6 +251,44 @@ async function main() {
     });
     await salva(config);
 
+    // ── 6b. Consegna lead — verifica ESEGUITA, non dichiarata ────────────
+    title('6b. CONSEGNA LEAD — il modulo esiste, ma i lead dentro si leggono davvero?');
+    console.log('  Un modulo che esiste non basta: leads_retrieval e\' un permesso granulare');
+    console.log('  che puo\' mancare anche con token che sembrano completi. Si verifica ORA,');
+    console.log('  eseguendo una lettura vera, non guardando solo gli scope dichiarati.\n');
+    if (config.access_token) {
+      try {
+        const consegna = await verificaConsegnaLead(config, blueprints);
+        if (!consegna.rilevante) {
+          info('Nessun blueprint in gioco usa ancora un modulo nativo ON_AD: controllo non applicabile per ora.');
+        } else if (consegna.leadsRetrievalOk === true) {
+          ok(`Consegna lead verificata (${consegna.metodo}): i lead sono leggibili con questo token.`);
+        } else {
+          fail(`Consegna lead NON verificata per ${consegna.blueprintCoinvolti?.join(', ') || 'i blueprint ON_AD'}: ${consegna.dettaglio || consegna.motivo || 'lead non leggibili'}.`);
+          console.log(`\n  ${C.bold}Due vie, entrambe pronte in questo repo:${C.reset}`);
+          console.log('  (a) Chiedi leads_retrieval sul token — richiede revisione app Meta (giorni, non minuti).');
+          console.log('  (b) Usa le varianti *-web (destination_type WEBSITE, blueprints/*-web.json): non dipendono');
+          console.log('      da questo permesso. Compila anche i due LANDING_URL qui sotto, cosi\' sono pronte.');
+        }
+      } catch (e) {
+        warn(`Controllo di consegna lead non eseguibile ora: ${e.message}.`);
+      }
+    } else {
+      info('Nessun token ancora: il controllo di consegna lead si rifara\' automaticamente all\'ultimo passo di questo wizard.');
+    }
+
+    title('6c. LANDING PAGE — solo se usi le varianti *-web (facoltativo)');
+    console.log(`  ${C.dim}Serve SOLO per lanciare A-estero-spagna-web / B-italia-distributori-web.${C.reset}`);
+    console.log(`  ${C.dim}Deve essere il dominio VERO e pubblicato di ~/alkemia-sheis-web — oggi e' solo${C.reset}`);
+    console.log(`  ${C.dim}un'anteprima Vercel (noindex): non spendere su un dominio non confermato.${C.reset}\n`);
+    config.resolve['LANDING_URL:distributori-es'] = await chiedi(rl, 'URL pagina distributori in spagnolo (es. https://dominio/es/distributori).', {
+      attuale: config.resolve['LANDING_URL:distributori-es'],
+    });
+    config.resolve['LANDING_URL:distributori-it'] = await chiedi(rl, 'URL pagina distributori in italiano (es. https://dominio/it/distributori).', {
+      attuale: config.resolve['LANDING_URL:distributori-it'],
+    });
+    await salva(config);
+
     // ── 7. Immagini ──────────────────────────────────────────────────────
     title('7. VISUAL — hash delle immagini caricate');
     console.log('  Carica ogni visual con: curl -F "filename=@file.jpg" -F "access_token=$TOKEN" \\');
@@ -366,8 +408,6 @@ async function main() {
 
     // ── 12. verdetto finale — un solo motore, quello condiviso ───────────
     title('VERDETTO FINALE');
-    const files = (await readdir(BLUEPRINT_DIR)).filter((f) => f.endsWith('.json')).sort();
-    const blueprints = await Promise.all(files.map(async (f) => JSON.parse(await readFile(join(BLUEPRINT_DIR, f), 'utf8'))));
 
     let preflightOk = false;
     if (config.access_token && config.ad_account_id) {

@@ -50,7 +50,11 @@
     "GEO_LAT": "",
     "GEO_LNG": "",
 
-    "CUSTOM_AUDIENCE_ID:ateco-4645": ""
+    "CUSTOM_AUDIENCE_ID:ateco-4645": "",
+
+    "_landing_url_nota": "Servono SOLO se lanci le varianti *-web (blueprints/A-estero-spagna-web.json, B-italia-distributori-web.json) invece dei moduli nativi — vedi PRONTI-AL-LANCIO.md 'Due vie per i lead'. Deve essere il dominio VERO e pubblicato del sito Next.js (~/alkemia-sheis-web): oggi e' solo un'anteprima Vercel (noindex). Non lanciare traffico a pagamento su un dominio non confermato.",
+    "LANDING_URL:distributori-es": "",
+    "LANDING_URL:distributori-it": ""
   },
 
   "_supabase_nota": "Opzionale. Serve solo a campagna_da_brief.mjs / stato_accessi.mjs per scrivere in sheis_campagne invece che nel registro locale .campagne/registro.json. Stessi nomi di ~/alkemia-sheis-backend/.env — puoi anche esportarli come variabili d'ambiente (SUPABASE_URL, SUPABASE_SECRET_KEY, SUPABASE_PROJECT_REF) invece di scriverli qui. Finche' mancano, tutto funziona lo stesso in locale.",

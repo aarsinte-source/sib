@@ -18,6 +18,36 @@ solo copiare-incollare i comandi scritti qui sotto.
 
 ---
 
+## ⚠️ Prima di tutto — i lead di A e B rischiano di restare prigionieri
+
+Verificato **eseguendo** il controllo il 2026-08-03 (non solo leggendo i
+permessi dichiarati): il token Meta disponibile **non ha `leads_retrieval`**.
+Un modulo lead si crea e si vede senza problemi, ma i contatti raccolti
+dentro **non si leggono via API** — l'errore è specifico e riproducibile:
+`(#200) Requires leads_retrieval permission to manage the object`.
+
+Questo tocca **A-estero-spagna** e **B-italia-distributori** (usano moduli
+istantanei nativi Meta). **Non tocca C-saloni-awareness**, che non raccoglie
+lead per costruzione.
+
+**Ci sono due vie, entrambe già pronte in questo repo:**
+
+| | Via (a) — modulo nativo | Via (b) — pagina del sito |
+|---|---|---|
+| Cosa serve | Il permesso `leads_retrieval` sul token | Il dominio vero del sito pubblicato |
+| Chi lo fa | Revisione app Meta (developers.facebook.com) | Chi gestisce `~/alkemia-sheis-web` + Supabase |
+| Quanto ci vuole | Giorni, non minuti — dipende da Meta | Un Personal Access Token Supabase (2 minuti, self-service) |
+| Blueprint da lanciare | `A-estero-spagna`, `B-italia-distributori` | `A-estero-spagna-web`, `B-italia-distributori-web` |
+| Verificato con `node attiva.mjs` | Sì (sezione "Consegna lead") | Struttura sì, consegna reale no — serve un invio di prova |
+
+**Cosa fare praticamente:**
+1. `node attiva.mjs` verifica da solo se il permesso c'è (esegue una lettura vera, non guarda solo gli scope). Se manca, te lo dice chiaramente.
+2. Se manca e serve lanciare **subito**, usa la via (b): compila i due `LANDING_URL` nel wizard e lancia `A-estero-spagna-web`/`B-italia-distributori-web` invece degli originali (stesso pubblico, stesso budget, stessa copy — cambia solo dove arriva il click).
+3. La via (b) ha un suo prerequisito, più leggero ma reale: la tabella `sheis_lead_ads` su Supabase non esiste ancora finché qualcuno non applica la migrazione con un **Personal Access Token** (`sbp_...`, si genera in 2 minuti su `supabase.com/dashboard/account/tokens` — istruzioni in `~/alkemia-sheis-backend/applica_migrazioni.py`). **Prima di spendere un euro sulla variante web, fai un invio di prova sul form vero e verifica che la riga arrivi in `sheis_lead_ads`.**
+4. Se nessuna delle due è pronta oggi, **C-saloni-awareness parte comunque**: non dipende da nessuna delle due vie.
+
+---
+
 ## Il comando unico: `node attiva.mjs`
 
 ```bash
@@ -157,15 +187,15 @@ dopo aver guardato le anteprime.
 
 ---
 
-## ⚠️ Tre cose da NON fare
+## ⚠️ Quattro cose da NON fare
 
-1. **Non lanciare mai `node launch.mjs` (né in anteprima né con `--live`)
-   senza `--only`, finché il tetto di spesa resta a 1.000 EUR/mese.**
-   I 3 blueprint insieme costano **1.003,20 EUR/mese** — 3,20 EUR sopra il
-   tetto. Il comando se ne accorge da solo e si rifiuta di partire (anche
-   solo per mostrare l'anteprima). Non è un errore da correggere nei file:
-   è il motivo per cui la sequenza di accensione è già decisa a fasi — vedi
-   punto 2.
+1. **Non lanciare mai `--live` senza `--only`, finché il tetto di spesa
+   resta a 1.000 EUR/mese.** I 3 blueprint insieme costano **1.003,20
+   EUR/mese** — 3,20 EUR sopra il tetto. In anteprima (`node launch.mjs`,
+   senza `--live`) questo è solo un avviso, apposta: un freno che impedisce
+   di GUARDARE non protegge niente. In `--live` invece blocca sul serio e
+   non si discute. Non è un errore da correggere nei file: è il motivo per
+   cui la sequenza di accensione è già decisa a fasi — vedi punto 2.
 
 2. **Segui la sequenza già decisa**: la campagna **A** (estero) e la **C**
    (saloni, awareness) si accendono nel **mese 1** (760 EUR/mese insieme,
@@ -178,6 +208,13 @@ dopo aver guardato le anteprime.
    budget in centesimi, `advantage_audience`, creatività collegate, testi
    che passano il linter di brand. Se dice "SI, PARTIREBBE" per tutti e tre
    i blueprint, il resto dipende solo dagli accessi veri.
+
+4. **Non lanciare `A-estero-spagna` o `B-italia-distributori` (le versioni
+   native, non `-web`) senza aver visto "Consegna lead verificata" in
+   `node attiva.mjs` o `node launch.mjs --preflight`.** Un modulo che esiste
+   non basta: se `leads_retrieval` manca, la campagna raccoglie lead che
+   restano dentro Meta, illeggibili via API, e nessuno se ne accorge da
+   solo — vedi la sezione "Prima di tutto" più sopra per le due vie d'uscita.
 
 ---
 
@@ -193,6 +230,11 @@ dopo aver guardato le anteprime.
 - **`advantage_audience` mancante**: non dovrebbe succedere sui blueprint
   già pronti (è verificato da `prova-a-secco.mjs`), ma se Meta lo rifiuta
   comunque, la correzione è nel `README.md` §3 ("Fallback advantage_audience").
+- **"Consegna lead: NON verificata" / `(#200) Requires leads_retrieval`**:
+  il modulo lead esiste ma i lead dentro non si leggono via API. Vedi
+  "⚠️ Prima di tutto" in cima a questa pagina per le due vie d'uscita — non
+  è un errore da ignorare o rilanciare: senza risolverlo, i lead raccolti
+  da A/B (versioni native) andrebbero persi in silenzio.
 
 Per qualunque altro dubbio, il comando `node stato_accessi.mjs` dà sempre
 il verdetto aggiornato — "possiamo lanciare?" — con la lista esatta di cosa
