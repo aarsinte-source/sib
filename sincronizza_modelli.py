@@ -87,6 +87,38 @@ def formato_per(canale: str) -> str:
     return FORMATO_PER_CANALE.get(canale, "auto")
 
 
+def _rapporto(f: str) -> float:
+    try:
+        a, b = f.split(":")
+        return float(a) / float(b)
+    except (ValueError, ZeroDivisionError):
+        return 1.0
+
+
+def formato_ammesso(lavoro: str, formato: str) -> tuple[str, str]:
+    """(formato_da_usare, spiegazione_se_sostituito).
+
+    ⚠️ Non tutti i modelli accettano tutti i formati: GPT Image 2 rifiuta il
+    4:5, che è proprio quello del feed Instagram. Misurato il 2026-08-03.
+
+    Quando il formato chiesto non c'è si prende il PIÙ VICINO per proporzione e
+    si RESTITUISCE LA SPIEGAZIONE. Sostituire in silenzio significherebbe
+    consegnare grafiche del formato sbagliato senza che nessuno se ne accorga —
+    e chi le pubblica scoprirebbe il taglio solo guardando il post uscito.
+    """
+    ammessi = scegli(lavoro).get("formati_supportati") or []
+    if not ammessi or formato in ammessi:
+        return formato, ""
+    candidati = [f for f in ammessi if f != "auto"]
+    if not candidati:
+        return formato, ""
+    vicino = min(candidati, key=lambda f: abs(_rapporto(f) - _rapporto(formato)))
+    return vicino, (
+        f"il formato {formato} non è supportato da {scegli(lavoro)['nome_umano']}: "
+        f"uso {vicino}, che è il più vicino"
+    )
+
+
 def costo_eur(lavoro: str, quante: int = 1) -> float:
     return round(scegli(lavoro)["crediti"] * quante * CREDITO_EUR, 4)
 '''
@@ -99,6 +131,7 @@ export type Lavoro = {
   crediti: number;
   perche: string;
   parametri: Record<string, string | number | boolean>;
+  formati_supportati?: readonly string[];
   attenzione?: string;
 };
 
@@ -124,6 +157,36 @@ export function scegli(lavoro: string): Lavoro {
  */
 export function formatoPer(canale: string): string {
   return (FORMATO_PER_CANALE as Record<string, string>)[canale] ?? "auto";
+}
+
+function rapporto(f: string): number {
+  const [a, b] = f.split(":").map(Number);
+  return b ? a / b : 1;
+}
+
+/**
+ * [formatoDaUsare, spiegazioneSeSostituito].
+ *
+ * ⚠️ Non tutti i modelli accettano tutti i formati: GPT Image 2 rifiuta il 4:5,
+ * che è proprio quello del feed Instagram. Misurato il 2026-08-03.
+ *
+ * Quando il formato chiesto non c'è si prende il PIÙ VICINO per proporzione e
+ * si restituisce la spiegazione. Sostituire in silenzio significherebbe
+ * consegnare grafiche del formato sbagliato senza che nessuno se ne accorga.
+ */
+export function formatoAmmesso(lavoro: string, formato: string): [string, string] {
+  const l = scegli(lavoro) as Lavoro & { formati_supportati?: readonly string[] };
+  const ammessi = l.formati_supportati ?? [];
+  if (ammessi.length === 0 || ammessi.includes(formato)) return [formato, ""];
+  const candidati = ammessi.filter((f) => f !== "auto");
+  if (candidati.length === 0) return [formato, ""];
+  const vicino = candidati.reduce((a, b) =>
+    Math.abs(rapporto(b) - rapporto(formato)) < Math.abs(rapporto(a) - rapporto(formato)) ? b : a,
+  );
+  return [
+    vicino,
+    `il formato ${formato} non è supportato da ${l.nome_umano}: uso ${vicino}, che è il più vicino`,
+  ];
 }
 
 export function costoEur(lavoro: string, quante = 1): number {
