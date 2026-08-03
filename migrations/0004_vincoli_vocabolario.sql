@@ -32,6 +32,34 @@ update sheis_contenuti set brand    = 'sheis-color'         where brand    in ('
 
 update sheis_candidati  set tipo = 'non-pertinente' where tipo = 'non_pertinente';
 
+-- ---------- 1-bis. due valori reali che nessun vincolo copriva ---------------
+-- Trovati dalla squadra che ha scritto il piano editoriale, e DICHIARATI invece
+-- di essere adattati in silenzio a un valore ammesso ma semanticamente sbagliato.
+-- È la stessa lacuna del trattino: un valore che esiste nella realtà e che nessun
+-- vincolo prevedeva.
+--
+-- (a) `stato = 'bloccato'` — serve al piano per un contenuto fermo in attesa di
+--     un consenso a monte (il caso del distributore di Pisa: la prova sociale
+--     più forte che SHEis abbia, inutilizzabile finché il diretto interessato non
+--     autorizza). «bloccato» esisteva solo sul CHECK di `sheis_pubblicazioni`,
+--     dove però significa un'altra cosa — «invio bloccato», non «in attesa di
+--     permesso». Due significati diversi per la stessa parola in due tabelle:
+--     qui lo si aggiunge esplicitamente col significato di questa tabella.
+alter table sheis_contenuti drop constraint if exists sheis_contenuti_stato_check;
+alter table sheis_contenuti add  constraint sheis_contenuti_stato_check
+  check (stato in ('in_attesa','approvato','modificato','scartato','bloccato',
+                   'in_produzione','prodotto','programmato','pubblicato','errore'));
+comment on column sheis_contenuti.stato is
+  'bloccato = pianificato ma fermo in attesa di un permesso o di un dato a monte (diverso da sheis_pubblicazioni.stato bloccato, che significa invio impedito).';
+
+-- (b) `serie` — raggruppa gli episodi di uno stesso filone (brand-mentalist,
+--     balayage-biondo, accademia, sun-babilon). Nato nel piano come campo di
+--     lavoro; senza una colonna vera si perderebbe al primo import, e con esso
+--     l'ordine degli episodi di una serie in cinque puntate.
+alter table sheis_contenuti add column if not exists serie          text;
+alter table sheis_contenuti add column if not exists serie_episodio int;
+create index if not exists idx_sheis_contenuti_serie on sheis_contenuti(serie, serie_episodio);
+
 -- ---------- 2. vincoli sul vocabolario --------------------------------------
 -- `pubblico` non aveva alcun vincolo: è esattamente il campo che è divergito.
 alter table sheis_contenuti drop constraint if exists sheis_contenuti_pubblico_check;
