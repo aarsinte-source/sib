@@ -1,0 +1,173 @@
+{
+  "$schema_version": "1.0",
+  "id": "B-italia-distributori",
+  "label": "ITALIA — distributori ATECO 46.45 (angolo SHEis Color)",
+  "priority": 2,
+  "priority_source": "sheis-brand-core §13.1 — 'Lead esteri, poi lead italiani' (8685768c · 55:15)",
+  "language": "it",
+  "audience_segment": "rete",
+  "activation_phase": 2,
+  "activation_note": "NON si accende nel mese 1. Entra solo dopo che la campagna A ha un CPL misurato. Accendere A e B insieme al mese 1 significa dimezzare due campagne che sono gia' entrambe sotto soglia.",
+
+  "🔴_avvertenza_tecnica": {
+    "titolo": "ATECO 46.45 NON e' un criterio di targeting Meta",
+    "spiegazione": "ATECO e' una classificazione statistica italiana. Meta non la espone in nessun campo di targeting. Chiunque scriva 'targetizziamo ATECO 46.45 su Meta' sta descrivendo qualcosa che non esiste. Le due strade reali sono: (1) PROXY per interessi/comportamenti — impreciso, e' quello che fa questo blueprint; (2) CUSTOM AUDIENCE da lista caricata — preciso, ma richiede la lista con contatti personali dei referenti, che le visure non danno.",
+    "universo_reale": "1.040 aziende italiane ATECO 46.45 sopra i 300k di fatturato, ~900 al netto delle prime 100 (b7fe5124 · 57:37 e 58:08).",
+    "conseguenza_onesta": "Un universo di ~900 aziende e' TROPPO PICCOLO per Meta. Anche con la lista perfetta, una custom audience di 900 aziende produce forse 300-500 profili personali matchati: sotto il minimo operativo e con reach quasi nulla. Meta NON e' il canale primario per questo ICP. Il canale primario e' l'outreach diretto (LinkedIn/email), per cui la copy e' gia' scritta in clienti/sheis-beauty-aiconsult/copy/OUTREACH-CONVERSAZIONI_linkedin-instagram_2026-07-20.md. Questa campagna vale come RINFORZO: fa in modo che quando l'outreach arriva, il nome sia gia' stato visto.",
+    "azione_richiesta": "Dichiararlo a Mauro invece di far finta che Meta risolva l'Italia. La lista ATECO va comprata da Report Aziende (499+IVA, gia' prevista a sostituzione di CreditSafe) e usata per l'outreach, non per il targeting."
+  },
+
+  "budget": {
+    "daily_eur": 8,
+    "monthly_eur_est": 243,
+    "share_of_total_pct": 24,
+    "learning_phase_status": "SOTTO_SOGLIA",
+    "learning_phase_note": "A 8 EUR/giorno con ottimizzazione LEAD_GENERATION si producono circa 0,4-0,7 lead/giorno: ~4 eventi a settimana contro i ~50 richiesti. L'algoritmo non impara mai. Decisione: si tiene comunque LEAD_GENERATION perche' l'obiettivo qui non e' l'ottimizzazione ma la presenza, e si giudica su CTR e costo-per-click, non su CPL. Se si volesse davvero far uscire questa campagna dall'apprendimento, l'unica strada e' ottimizzare per LINK_CLICKS — ma manca una landing degna e il sito oggi non e' utilizzabile (vedi blocco /negozio/)."
+  },
+
+  "campaign": {
+    "name": "SHEIS | B | ITALIA | Distributori | LEADS | 2026-07",
+    "objective": "OUTCOME_LEADS",
+    "buying_type": "AUCTION",
+    "special_ad_categories": [],
+    "status": "PAUSED",
+    "bid_strategy": "LOWEST_COST_WITHOUT_CAP",
+    "campaign_budget_optimization": false
+  },
+
+  "adsets": [
+    {
+      "name": "SHEIS | B | IT | Distribuzione professionale | 35-60",
+      "daily_budget_cents": 800,
+      "billing_event": "IMPRESSIONS",
+      "optimization_goal": "LEAD_GENERATION",
+      "destination_type": "ON_AD",
+      "status": "PAUSED",
+      "promoted_object": {
+        "page_id": "<<PAGE_ID>>"
+      },
+      "targeting": {
+        "geo_locations": {
+          "countries": ["IT"],
+          "location_types": ["home", "recent"]
+        },
+        "geo_note": "Italia intera al primo giro. Con 8 EUR/giorno restringere anche la geografia significa reach zero. Se dopo 30 giorni serve concentrare, la prima scelta e' la Lombardia (1.200 aziende, b7fe5124 · 48:46).",
+        "age_min": 35,
+        "age_max": 60,
+        "targeting_automation": {
+          "advantage_audience": 0
+        },
+        "advantage_audience_note": "OBBLIGATORIO, altrimenti la creazione dell'adset fallisce.",
+        "flexible_spec": [
+          {
+            "interests": [
+              { "id": "<<INTEREST_ID:Davines>>", "name": "Davines" },
+              { "id": "<<INTEREST_ID:Alfaparf Milano>>", "name": "Alfaparf Milano" },
+              { "id": "<<INTEREST_ID:Kemon>>", "name": "Kemon" },
+              { "id": "<<INTEREST_ID:Framesi>>", "name": "Framesi" },
+              { "id": "<<INTEREST_ID:Parrucchiere>>", "name": "Parrucchiere / Hairdresser" },
+              { "id": "<<INTEREST_ID:Cosmetica professionale>>", "name": "Professional cosmetics" }
+            ],
+            "behaviors": [
+              { "id": "<<BEHAVIOR_ID:Facebook Page admins>>", "name": "Amministratori di pagine Facebook", "note": "Miglior proxy disponibile per 'ha un'attivita'', in assenza di targeting per ATECO." }
+            ]
+          }
+        ],
+        "custom_audiences_optional": [
+          { "id": "<<CUSTOM_AUDIENCE_ID:ateco-4645>>", "name": "ATECO 46.45 - lista Report Aziende", "status": "DA_COSTRUIRE", "note": "Opzionale e probabilmente sotto-dimensionata. Vedi avvertenza tecnica in testa al file." }
+        ],
+        "publisher_platforms": ["facebook", "instagram"],
+        "facebook_positions": ["feed", "video_feeds"],
+        "instagram_positions": ["stream", "reels"],
+        "device_platforms": ["mobile", "desktop"]
+      }
+    }
+  ],
+
+  "ads": [
+    { "name": "SHEIS | B | IT | AD1 | 83-nuance-15-minuti", "adset_ref": "SHEIS | B | IT | Distribuzione professionale | 35-60", "creative_ref": "CR-B1", "status": "PAUSED" },
+    { "name": "SHEIS | B | IT | AD2 | zone-scoperte", "adset_ref": "SHEIS | B | IT | Distribuzione professionale | 35-60", "creative_ref": "CR-B2", "status": "PAUSED" },
+    { "name": "SHEIS | B | IT | AD3 | non-online", "adset_ref": "SHEIS | B | IT | Distribuzione professionale | 35-60", "creative_ref": "CR-B3", "status": "PAUSED" }
+  ],
+
+  "creatives": [
+    {
+      "ref": "CR-B1",
+      "name": "SHEIS | B | CR | 83-nuance-15-minuti",
+      "object_story_spec": {
+        "page_id": "<<PAGE_ID>>",
+        "instagram_actor_id": "<<INSTAGRAM_ACTOR_ID>>",
+        "link_data": {
+          "image_hash": "<<IMAGE_HASH:B1>>",
+          "link": "<<LEAD_FORM_LINK>>",
+          "message": "83 nuance. Posa 15 minuti. Senza ammoniaca.\n\nSHEis Color e' una linea che in salone si spiega da sola: il tempo-poltrona si accorcia e il risultato si vede alla prima applicazione.\n\nProduzione italiana, zona in esclusiva, nessuna vendita online che vada a competere con il suo territorio.\n\nSe distribuisce ai saloni professionali e sta valutando una linea colore da affiancare, ne parliamo in venti minuti.",
+          "name": "83 nuance, posa 15 minuti, senza ammoniaca",
+          "description": "SHEis Beauty International - Pineto (TE)",
+          "call_to_action": { "type": "SIGN_UP", "value": { "lead_gen_form_id": "<<LEAD_FORM_ID:IT>>" } }
+        }
+      }
+    },
+    {
+      "ref": "CR-B2",
+      "name": "SHEIS | B | CR | zone-scoperte",
+      "object_story_spec": {
+        "page_id": "<<PAGE_ID>>",
+        "instagram_actor_id": "<<INSTAGRAM_ACTOR_ID>>",
+        "link_data": {
+          "image_hash": "<<IMAGE_HASH:B2>>",
+          "link": "<<LEAD_FORM_LINK>>",
+          "message": "Abbiamo alcune zone d'Italia ancora scoperte.\n\nSHEis Beauty International, Pineto. Cosmetica professionale per capelli: colore senza ammoniaca con 83 nuance, BABILON con 99% di ingredienti di origine naturale, YOUNIC con sistema tricologico brevettato.\n\nLavoriamo solo con la distribuzione professionale, per zone in esclusiva. Chi entra in una zona, quella zona resta sua.\n\nSe distribuisce ai saloni, guardiamo insieme se la sua e' tra quelle libere.",
+          "name": "Alcune zone sono ancora scoperte",
+          "description": "Solo distribuzione professionale",
+          "call_to_action": { "type": "SIGN_UP", "value": { "lead_gen_form_id": "<<LEAD_FORM_ID:IT>>" } }
+        }
+      }
+    },
+    {
+      "ref": "CR-B3",
+      "name": "SHEIS | B | CR | non-online",
+      "object_story_spec": {
+        "page_id": "<<PAGE_ID>>",
+        "instagram_actor_id": "<<INSTAGRAM_ACTOR_ID>>",
+        "link_data": {
+          "image_hash": "<<IMAGE_HASH:B3>>",
+          "link": "<<LEAD_FORM_LINK>>",
+          "message": "Non siamo in vendita online. Ne' diretta al consumatore, ne' sui marketplace.\n\nPer chi distribuisce non e' un dettaglio: e' la differenza tra costruire un marchio nei propri saloni e vederselo scontato altrove sei mesi dopo.\n\nSHEis Beauty International, produzione italiana, tre linee professionali, zona in esclusiva.\n\nSe distribuisce ai saloni professionali, parliamone.",
+          "name": "Un marchio che non trova online",
+          "description": "SHEis Beauty International - Italia",
+          "call_to_action": { "type": "SIGN_UP", "value": { "lead_gen_form_id": "<<LEAD_FORM_ID:IT>>" } }
+        }
+      }
+    }
+  ],
+
+  "lead_form_spec": {
+    "name": "SHEis | Distributori Italia | 2026-07",
+    "locale": "IT_IT",
+    "privacy_policy_url": "<<PRIVACY_URL>>",
+    "questions": [
+      { "type": "FULL_NAME" },
+      { "type": "COMPANY_NAME" },
+      { "type": "EMAIL" },
+      { "type": "PHONE" },
+      { "type": "CUSTOM", "label": "In quali province distribuisce?" },
+      { "type": "CUSTOM", "label": "Quali marchi professionali ha gia' in portafoglio?", "qualifier_note": "Domanda di classificazione Profit/Break-even/KO." },
+      { "type": "CUSTOM", "label": "A quanti saloni fornisce indicativamente?" }
+    ],
+    "form_type": "MORE_VOLUME"
+  },
+
+  "kpi": {
+    "primario": "CTR outbound e costo per click — NON il CPL",
+    "primario_perche": "A questo budget il CPL non e' statisticamente leggibile: 20 lead al mese non distinguono un buon annuncio da uno fortunato.",
+    "secondari": ["Lead grezzi assoluti a 30 giorni", "Tasso di qualifica", "CPM"],
+    "target_ctr_outbound_pct": 0.8,
+    "target_ctr_note": "Target piu' alto che sull'estero: qui il pubblico e' in lingua madre e i marchi citati gli sono familiari."
+  },
+
+  "kill_criteria": [
+    { "trigger": "5.000 impression e CTR outbound < 0,5%", "azione": "Sostituisci le creativita'.", "livello": "creativita'" },
+    { "trigger": "150 EUR spesi e 0 lead grezzi", "azione": "Spegni B e rimetti il budget su A. In Italia il canale giusto e' l'outreach, non Meta: questa campagna e' rinforzo, non acquisizione.", "livello": "canale" },
+    { "trigger": "Frequenza > 3,5 su 30 giorni", "azione": "Pubblico saturo: il proxy per interessi ha raschiato il fondo. Conferma che Meta non e' il canale per questo ICP.", "livello": "pubblico" }
+  ]
+}

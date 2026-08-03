@@ -1,0 +1,197 @@
+{
+  "$schema_version": "1.0",
+  "id": "A-estero-spagna",
+  "label": "ESTERO — ricerca importatore/distributore Spagna (BABILON spearhead)",
+  "priority": 1,
+  "priority_source": "sheis-brand-core §13.1 — 'proprio la priorita assoluta' (8685768c · 55:15)",
+  "language": "es",
+  "audience_segment": "rete",
+  "audience_policy_note": "Segmento 'rete' (distributori/importatori). Campagna d'attesa e toni di anticipazione AMMESSI verso questo segmento — vedi guardrails.json audience_policy.rete.",
+
+  "budget": {
+    "daily_eur": 22,
+    "monthly_eur_est": 669,
+    "share_of_total_pct": 67,
+    "learning_phase_status": "LEARNING_LIMITED_PERMANENTE",
+    "learning_phase_note": "Un adset che ottimizza per LEAD_GENERATION esce dall'apprendimento con ~50 eventi/7gg. A CPL realistico 12-20 EUR servirebbero 600-1400 EUR/settimana. Con questo budget mensile non ci si arriva mai. Decisione: si accetta, si tiene UN SOLO adset per concentrare il budget, e si giudica su 30 giorni in valore assoluto — mai sul CPA settimanale."
+  },
+
+  "campaign": {
+    "name": "SHEIS | A | ESTERO ES | Importatore | LEADS | 2026-07",
+    "objective": "OUTCOME_LEADS",
+    "buying_type": "AUCTION",
+    "special_ad_categories": [],
+    "status": "PAUSED",
+    "bid_strategy": "LOWEST_COST_WITHOUT_CAP",
+    "campaign_budget_optimization": false,
+    "cbo_note": "CBO disattivato di proposito: con un solo adset non serve, e ABO rende il budget leggibile per adset."
+  },
+
+  "adsets": [
+    {
+      "name": "SHEIS | A | ES | Distribucion profesional | 30-60",
+      "daily_budget_cents": 2200,
+      "billing_event": "IMPRESSIONS",
+      "optimization_goal": "LEAD_GENERATION",
+      "destination_type": "ON_AD",
+      "destination_note": "Modulo istantaneo Meta (instant form). Scelta deliberata: il sito sheishair.com NON serve oggi il distributore estero e contiene una pagina /negozio/ con H1 'Shop' che e' un rischio di conflitto di canale. Nessun traffico a pagamento va sul sito finche' quella pagina non e' rimossa.",
+      "status": "PAUSED",
+      "promoted_object": {
+        "page_id": "<<PAGE_ID>>"
+      },
+      "targeting": {
+        "geo_locations": {
+          "countries": ["ES"],
+          "location_types": ["home", "recent"]
+        },
+        "age_min": 30,
+        "age_max": 60,
+        "age_note": "Eta media dei referenti dichiarata dal cliente: 40-60 anni (b7fe5124 · 1:27:27). Si apre a 30 per non tagliare i secondi livelli aziendali.",
+        "locales": [],
+        "targeting_automation": {
+          "advantage_audience": 0
+        },
+        "advantage_audience_note": "OBBLIGATORIO. Senza questo campo la create_ad_set fallisce. Impostato a 0 perche' la strategia e' targeting chirurgico: l'espansione Advantage+ vanificherebbe la selezione per interessi professionali. Se l'API rifiuta 0 per questo obiettivo, vedi README sezione 'Fallback advantage_audience'.",
+        "flexible_spec": [
+          {
+            "interests": [
+              { "id": "<<INTEREST_ID:Davines>>", "name": "Davines" },
+              { "id": "<<INTEREST_ID:Kevin Murphy>>", "name": "Kevin Murphy" },
+              { "id": "<<INTEREST_ID:Alfaparf Milano>>", "name": "Alfaparf Milano" },
+              { "id": "<<INTEREST_ID:Peluqueria>>", "name": "Peluqueria / Hairdressing" },
+              { "id": "<<INTEREST_ID:Distribucion mayorista>>", "name": "Wholesale distribution" }
+            ]
+          }
+        ],
+        "interests_source": "Competitor validati dal cliente — sheis-brand-core §6 (6b6cc1a3 · 2:02:40 e 2:03:44)",
+        "publisher_platforms": ["facebook", "instagram"],
+        "facebook_positions": ["feed", "video_feeds"],
+        "instagram_positions": ["stream", "reels"],
+        "positions_note": "Audience network e Messenger esclusi: su B2B producono lead accidentali e sporcano un dataset gia' piccolo.",
+        "device_platforms": ["mobile", "desktop"]
+      }
+    }
+  ],
+
+  "ads": [
+    {
+      "name": "SHEIS | A | ES | AD1 | no-venta-online",
+      "adset_ref": "SHEIS | A | ES | Distribucion profesional | 30-60",
+      "creative_ref": "CR-A1",
+      "status": "PAUSED"
+    },
+    {
+      "name": "SHEIS | A | ES | AD2 | babilon-99",
+      "adset_ref": "SHEIS | A | ES | Distribucion profesional | 30-60",
+      "creative_ref": "CR-A2",
+      "status": "PAUSED"
+    },
+    {
+      "name": "SHEIS | A | ES | AD3 | un-importador",
+      "adset_ref": "SHEIS | A | ES | Distribucion profesional | 30-60",
+      "creative_ref": "CR-A3",
+      "status": "PAUSED"
+    }
+  ],
+
+  "creatives": [
+    {
+      "ref": "CR-A1",
+      "name": "SHEIS | A | CR | no-venta-online",
+      "object_story_spec": {
+        "page_id": "<<PAGE_ID>>",
+        "instagram_actor_id": "<<INSTAGRAM_ACTOR_ID>>",
+        "link_data": {
+          "image_hash": "<<IMAGE_HASH:A1>>",
+          "link": "<<LEAD_FORM_LINK>>",
+          "message": "Fabricante italiano de cosmetica profesional capilar. Buscamos un importador para Espana.\n\nLo que probablemente le importe mas: no vendemos online. Ni venta directa al consumidor, ni marketplaces. Lo que entra en su territorio, se queda en su territorio.\n\nTres lineas: color sin amoniaco con 83 matices y 15 minutos de exposicion, BABILON con 99% de ingredientes de origen natural, y YOUNIC, sistema tricologico patentado desde 2002.\n\nZona en exclusiva. Solo distribucion profesional.",
+          "name": "Buscamos un importador para Espana",
+          "description": "SHEis Beauty International - Pineto, Italia",
+          "call_to_action": {
+            "type": "SIGN_UP",
+            "value": {
+              "lead_gen_form_id": "<<LEAD_FORM_ID:ES>>"
+            }
+          }
+        }
+      }
+    },
+    {
+      "ref": "CR-A2",
+      "name": "SHEIS | A | CR | babilon-99",
+      "object_story_spec": {
+        "page_id": "<<PAGE_ID>>",
+        "instagram_actor_id": "<<INSTAGRAM_ACTOR_ID>>",
+        "link_data": {
+          "image_hash": "<<IMAGE_HASH:A2>>",
+          "link": "<<LEAD_FORM_LINK>>",
+          "message": "BABILON: wash, care y style con 99% de ingredientes de origen natural.\n\nEs un dato de formulacion, no una promesa. Fabricacion italiana, para salones profesionales.\n\nBuscamos un importador para Espana. Zona en exclusiva, sin venta online que le compita en su propio territorio.",
+          "name": "BABILON - 99% de origen natural",
+          "description": "Fabricante italiano. Distribucion profesional.",
+          "call_to_action": {
+            "type": "SIGN_UP",
+            "value": {
+              "lead_gen_form_id": "<<LEAD_FORM_ID:ES>>"
+            }
+          }
+        }
+      }
+    },
+    {
+      "ref": "CR-A3",
+      "name": "SHEIS | A | CR | un-importador",
+      "object_story_spec": {
+        "page_id": "<<PAGE_ID>>",
+        "instagram_actor_id": "<<INSTAGRAM_ACTOR_ID>>",
+        "link_data": {
+          "image_hash": "<<IMAGE_HASH:A3>>",
+          "link": "<<LEAD_FORM_LINK>>",
+          "message": "Un solo importador para Espana.\n\nSomos un fabricante italiano de cosmetica profesional capilar, con tres lineas y una red de distribucion que trabaja por zonas en exclusiva.\n\nNo estamos en venta online y no tenemos intencion de estarlo: es una decision de canal, no una fase.\n\nSi distribuye a salones profesionales, hablemos veinte minutos.",
+          "name": "Un solo importador para Espana",
+          "description": "SHEis Beauty International - Italia",
+          "call_to_action": {
+            "type": "SIGN_UP",
+            "value": {
+              "lead_gen_form_id": "<<LEAD_FORM_ID:ES>>"
+            }
+          }
+        }
+      }
+    }
+  ],
+
+  "lead_form_spec": {
+    "note": "Da creare a mano nel Gestore Moduli o via API quando arrivano gli accessi. Specifica qui sotto.",
+    "name": "SHEis | Importador Espana | 2026-07",
+    "locale": "ES_ES",
+    "privacy_policy_url": "<<PRIVACY_URL>>",
+    "questions": [
+      { "type": "FULL_NAME" },
+      { "type": "COMPANY_NAME" },
+      { "type": "EMAIL" },
+      { "type": "PHONE" },
+      { "type": "CUSTOM", "label": "En que provincias distribuye actualmente?" },
+      { "type": "CUSTOM", "label": "Que marcas profesionales tiene ya en cartera?", "qualifier_note": "Serve a classificare Profit/Break-even/KO secondo la lista competitor del cliente (6b6cc1a3 · 2:03:44). E' la domanda che vale piu' di tutte le altre." },
+      { "type": "CUSTOM", "label": "A cuantos salones sirve aproximadamente?" }
+    ],
+    "form_type": "MORE_VOLUME",
+    "form_type_note": "MORE_VOLUME e non HIGHER_INTENT: con questo budget il volume di lead e' gia' strutturalmente basso, la qualifica la fanno le 3 domande custom, non l'attrito della schermata di revisione."
+  },
+
+  "kpi": {
+    "primario": "Lead qualificati (distributore/importatore reale con portafoglio marchi dichiarato)",
+    "secondari": ["CPL grezzo", "tasso di qualifica", "CTR outbound", "CPM"],
+    "target_cpl_grezzo_eur": "8-20",
+    "target_tasso_qualifica_pct": 30,
+    "target_ctr_outbound_pct": 0.6,
+    "benchmark_note": "Nessun dato storico SHEis su Meta esiste. Questi target sono di partenza, da ricalibrare dopo i primi 30 giorni con dati reali. Non presentarli al cliente come previsioni."
+  },
+
+  "kill_criteria": [
+    { "trigger": "5.000 impression e CTR outbound < 0,4%", "azione": "Sostituisci le creativita', NON spegnere la campagna. E' un problema di gancio, non di pubblico.", "livello": "creativita'" },
+    { "trigger": "200 EUR spesi e 0 lead grezzi", "azione": "Cambia angolo: ruota da 'no venta online' a 'BABILON 99%'. Il pubblico regge, il messaggio no.", "livello": "angolo" },
+    { "trigger": "400 EUR spesi e meno di 3 lead grezzi", "azione": "Allarga la geografia a Portogallo o restringi agli interessi competitor puri. Una variabile per volta.", "livello": "pubblico" },
+    { "trigger": "1 mese pieno (circa 670 EUR) e 0 lead qualificati", "azione": "STOP campagna. Con questo budget Meta non e' il canale per l'importatore estero: sposta il budget su outreach LinkedIn, che per questo ICP ha copy gia' pronta.", "livello": "canale" },
+    { "trigger": "Frequenza > 4 su 30 giorni", "azione": "Il pubblico e' saturo: allarga geo o cambia set di interessi.", "livello": "pubblico" }
+  ]
+}
