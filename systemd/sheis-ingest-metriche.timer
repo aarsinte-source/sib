@@ -1,0 +1,12 @@
+[Unit]
+Description=Ogni giorno alle 07:00 Europe/Rome — raccoglie le metriche IG PRIMA del report delle 09:00 di lunedì
+# Cadenza giornaliera: costruisce la serie storica un punto al giorno (3
+# chiamate ScrapeCreators/giorno, ~90/mese) senza bruciare crediti inutilmente.
+
+[Timer]
+OnCalendar=*-*-* 07:00:00
+Persistent=true
+Unit=sheis-ingest-metriche.service
+
+[Install]
+WantedBy=timers.target

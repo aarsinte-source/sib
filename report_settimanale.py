@@ -4,11 +4,14 @@
 Tre metà, come richiesto dal cliente:
 
   organico       contenuti usciti, andamento, cosa ha funzionato e perché.
-                 Segnale di affinità = rapporto like/views (soglia BRAND-IDENTITY:
-                 sopra 2% il contenuto ha trovato le persone giuste, sotto 0,5%
-                 ha solo fatto numero). ⚠️ Oggi questo DB non ha ancora
-                 un'ingestione delle metriche IG: la sezione lo dichiara, non
-                 finge un numero.
+                 Segnale di affinità = rapporto like/views sui reel (soglia
+                 BRAND-IDENTITY: sopra 2% il contenuto ha trovato le persone
+                 giuste, sotto 0,5% ha solo fatto numero — mediana profilo
+                 misurata 1,61%). La fonte è `sheis_metriche_ig`, popolata da
+                 `ingest_metriche_ig.py`; finché quella tabella non esiste nel
+                 DB, si usa come fallback l'ultima rilevazione locale
+                 (`data/METRICHE-IG_ultima-rilevazione.json`) — e lo si dice,
+                 sempre, con la fonte esplicita in chiaro.
   pubblicitario  spesa, costo per contatto, creatività migliori. Legge
                  `sheis_campagne`. Se non c'è nessuna campagna attiva, lo dice:
                  "nessuna campagna attiva: manca l'account pubblicitario" — MAI
@@ -24,18 +27,23 @@ canali.py del centralino: un canale che cade non fa cadere l'altro.
 """
 from __future__ import annotations
 
+import json
 import os
 import sqlite3
 import sys
 from datetime import date, timedelta
 from pathlib import Path
+from statistics import median
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from lib import canali, supabase  # noqa: E402
 
 LIVE = os.environ.get("LIVE") == "1"
+QUI = Path(__file__).resolve().parent
 OUTREACH_DB = Path(os.environ.get("SHEIS_OUTREACH_DB", str(Path.home() / "alkemia-sheis-outreach" / "data" / "outreach.db")))
+SOGLIA_AFFINE_PCT = 2.0
+SOGLIA_RUMORE_PCT = 0.5
 
 
 def periodo_settimana_scorsa(oggi: date | None = None) -> tuple[date, date]:
@@ -50,10 +58,70 @@ def periodo_settimana_scorsa(oggi: date | None = None) -> tuple[date, date]:
 
 
 # --------------------------------------------------------------------- organico
+def _riga_affinita(fonte: str, disponibile: bool, motivo: str = "", mediana_pct: float | None = None,
+                    n_reel: int = 0, migliore: dict | None = None, peggiore: dict | None = None,
+                    rilevato_il: str = "") -> dict:
+    return {"fonte": fonte, "disponibile": disponibile, "motivo": motivo, "mediana_pct": mediana_pct,
+            "n_reel": n_reel, "migliore": migliore, "peggiore": peggiore, "rilevato_il": rilevato_il}
+
+
+def _statistiche_da_record(record: list[dict]) -> tuple[float | None, int, dict | None, dict | None]:
+    reel = [r for r in record if r.get("tipo_contenuto") == "reel" and r.get("like_su_views_pct") is not None]
+    if not reel:
+        return None, 0, None, None
+    mediana = round(median(r["like_su_views_pct"] for r in reel), 3)
+    migliore = max(reel, key=lambda r: r["like_su_views_pct"])
+    peggiore = min(reel, key=lambda r: r["like_su_views_pct"])
+    return mediana, len(reel), migliore, peggiore
+
+
+def sezione_affinita(db: supabase.SupabaseClient, periodo_da: date, periodo_a: date) -> dict:
+    """Rapporto like/views sui reel — fonte preferita: sheis_metriche_ig nel
+    periodo. Se la tabella non esiste ancora, fallback sull'ultima rilevazione
+    locale scritta da ingest_metriche_ig.py (sempre etichettata come tale)."""
+    pronto, msg = db.schema_pronto(["sheis_metriche_ig"])
+    if pronto:
+        esito = db.select(
+            "sheis_metriche_ig",
+            query=(
+                "select=like_su_views_pct,caption_estratto,tipo_contenuto"
+                f"&tipo_contenuto=eq.reel&like_su_views_pct=not.is.null"
+                f"&rilevato_il=gte.{periodo_da.isoformat()}T00:00:00"
+                f"&rilevato_il=lte.{periodo_a.isoformat()}T23:59:59"
+            ),
+        )
+        if not esito.ok:
+            return _riga_affinita("db", False, f"errore lettura sheis_metriche_ig: {esito.errore}")
+        if not esito.dati:
+            return _riga_affinita("db", False, "tabella pronta ma nessuna rilevazione nel periodo — eseguire ingest_metriche_ig.py")
+        mediana, n_reel, migliore, peggiore = _statistiche_da_record(esito.dati)
+        return _riga_affinita("db", True, mediana_pct=mediana, n_reel=n_reel, migliore=migliore, peggiore=peggiore)
+
+    # Fallback: ultima rilevazione locale (file piccolo, già normalizzato — sicuro da leggere per intero)
+    riepilogo = QUI / "data" / "METRICHE-IG_ultima-rilevazione.json"
+    if not riepilogo.is_file():
+        return _riga_affinita("nessuna", False, f"{msg} — nessuna rilevazione locale trovata: eseguire ingest_metriche_ig.py almeno una volta")
+
+    try:
+        dati = json.loads(riepilogo.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as e:
+        return _riga_affinita("nessuna", False, f"{msg} — file locale illeggibile: {e}")
+
+    mediana, n_reel, migliore, peggiore = _statistiche_da_record(dati.get("record", []))
+    if mediana is None:
+        return _riga_affinita("file_locale", False, f"{msg} — rilevazione locale del {dati.get('rilevato_il', '?')} senza reel con views > 0")
+    return _riga_affinita(
+        "file_locale", True, mediana_pct=mediana, n_reel=n_reel, migliore=migliore, peggiore=peggiore,
+        rilevato_il=dati.get("rilevato_il", "?"),
+    )
+
+
 def sezione_organico(db: supabase.SupabaseClient, periodo_da: date, periodo_a: date) -> dict:
+    affinita = sezione_affinita(db, periodo_da, periodo_a)
+
     pronto, msg = db.schema_pronto(["sheis_contenuti"])
     if not pronto:
-        return {"disponibile": False, "motivo": msg, "pubblicati": []}
+        return {"disponibile": False, "motivo": msg, "pubblicati": [], "n": 0, "affinita": affinita}
 
     esito = db.select(
         "sheis_contenuti",
@@ -64,20 +132,9 @@ def sezione_organico(db: supabase.SupabaseClient, periodo_da: date, periodo_a: d
         ),
     )
     if not esito.ok:
-        return {"disponibile": False, "motivo": f"errore lettura sheis_contenuti: {esito.errore}", "pubblicati": []}
+        return {"disponibile": False, "motivo": f"errore lettura sheis_contenuti: {esito.errore}", "pubblicati": [], "n": 0, "affinita": affinita}
 
-    return {
-        "disponibile": True,
-        "pubblicati": esito.dati,
-        "n": len(esito.dati),
-        "metrica_affinita_disponibile": False,
-        "metrica_affinita_motivo": (
-            "il rapporto like/views (soglia BRAND-IDENTITY: >2% = pubblico giusto, <0,5% = "
-            "solo numero) non è ancora misurabile qui: manca l'ingestione delle metriche IG "
-            "in questo database. Questa sezione riporta SOLO cosa è uscito, non come ha performato — "
-            "finché il worker di ingestione non esiste, dirlo è più onesto che stimarlo."
-        ),
-    }
+    return {"disponibile": True, "pubblicati": esito.dati, "n": len(esito.dati), "affinita": affinita}
 
 
 # ---------------------------------------------------------------- pubblicitario
@@ -156,7 +213,21 @@ def render_markdown(periodo_da: date, periodo_a: date, organico: dict, pubbl: di
         righe.append(f"- Contenuti pubblicati nel periodo: **{organico['n']}**")
         for p in organico["pubblicati"][:15]:
             righe.append(f"  - {p.get('data_pubblicazione')} · {p.get('canale')} · {p.get('brand') or '—'} · {p.get('formato') or '—'} — {p.get('hook') or '(senza hook)'}")
-        righe.append(f"- ⚠️ Affinità (like/views): {organico['metrica_affinita_motivo']}")
+
+    aff = organico["affinita"]
+    if aff["disponibile"]:
+        m = aff["mediana_pct"]
+        giudizio = "✅ pubblico affine trovato" if m >= SOGLIA_AFFINE_PCT else (
+            "⚠️ sotto la soglia di rumore — reach senza risonanza" if m < SOGLIA_RUMORE_PCT else "nella norma, non eccezionale")
+        nota_fonte = f" (rilevazione locale del {aff['rilevato_il']}, DB non ancora popolato)" if aff["fonte"] == "file_locale" else ""
+        righe.append(f"- Affinità reel (like/views): mediana **{m}%** su {aff['n_reel']} reel{nota_fonte} — {giudizio}")
+        righe.append(f"  (soglie BRAND-IDENTITY: <{SOGLIA_RUMORE_PCT}% = rumore, >{SOGLIA_AFFINE_PCT}% = pubblico affine, mediana profilo misurata 1,61%)")
+        if aff.get("migliore"):
+            righe.append(f"  - Ha funzionato meglio: {aff['migliore']['like_su_views_pct']}% — «{(aff['migliore'].get('caption_estratto') or '')[:80]}…»")
+        if aff.get("peggiore"):
+            righe.append(f"  - Ha funzionato peggio: {aff['peggiore']['like_su_views_pct']}% — «{(aff['peggiore'].get('caption_estratto') or '')[:80]}…»")
+    else:
+        righe.append(f"- ⚠️ Affinità (like/views): {aff['motivo']}")
     righe.append("")
 
     righe.append("## Pubblicitario")
@@ -186,6 +257,12 @@ def render_markdown(periodo_da: date, periodo_a: date, organico: dict, pubbl: di
 def render_telegram(periodo_da: date, periodo_a: date, organico: dict, pubbl: dict, outreach: dict) -> str:
     righe = [f"📊 Report SHEis {periodo_da:%d/%m}-{periodo_a:%d/%m}", ""]
     righe.append(f"Organico: {organico['n'] if organico['disponibile'] else 'n/d — ' + organico['motivo']}")
+    aff = organico["affinita"]
+    if aff["disponibile"]:
+        righe.append(f"Affinità reel: {aff['mediana_pct']}% mediana su {aff['n_reel']} reel"
+                      + (" (fonte locale, DB vuoto)" if aff["fonte"] == "file_locale" else ""))
+    else:
+        righe.append(f"Affinità reel: n/d — {aff['motivo']}")
     righe.append(f"Ads: {'attivo' if pubbl['attivo'] else pubbl['motivo']}")
     if outreach["disponibile"]:
         righe.append(f"Outreach: {outreach['tocchi_nel_periodo']} tocchi, {outreach['risposte_totale']} risposte totali")

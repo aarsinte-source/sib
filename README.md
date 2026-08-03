@@ -25,6 +25,7 @@ Questo repo LEGGE gli altri tre (schema, dati) ma non ci scrive mai dentro.
 | `report_settimanale.py` | lunedì 09:00 Europe/Rome | Report organico + pubblicitario + outreach via email + Telegram |
 | `creative_worker.py` | ogni ora | Genera le 3 varianti Higgsfield per ogni contenuto `approvato` |
 | `analisi_mensile.py` | 1° del mese, 06:00 | Rigenera mercato/trend (ScrapeCreators + DataForSEO) |
+| `ingest_metriche_ig.py` | ogni giorno, 07:00 (prima del report di lunedì) | Raccoglie follower/like/commenti/views reali di @sheisbeautyhair e li scrive in `sheis_metriche_ig` — la fonte di `report_settimanale.py` per "cosa ha funzionato e perché" |
 
 Le unit systemd sono in `systemd/` — **non installate**, solo pronte (vedi
 "Installazione sul VPS" più sotto).
@@ -51,10 +52,37 @@ Le unit systemd sono in `systemd/` — **non installate**, solo pronte (vedi
    prova" sui canali Alkemia è **vietato per costruzione**: il worker non ha
    nemmeno un percorso di codice che lo permetta.
 
-3. **Nessuna generazione Higgsfield, nessuna chiamata ScrapeCreators/DataForSEO
-   è mai stata fatta in questa sessione.** `creative_worker.py` e
-   `analisi_mensile.py` girano SOLO in simulazione finché `LIVE=1` non è
+3. **Nessuna generazione Higgsfield è mai stata fatta in questa sessione.**
+   `creative_worker.py` gira SOLO in simulazione finché `LIVE=1` non è
    impostato esplicitamente — e in questa sessione non lo è mai stato.
+   `analisi_mensile.py` idem: sempre in DRY-RUN in questa sessione.
+
+4. **`ingest_metriche_ig.py` invece È STATO eseguito davvero il 2026-08-03**
+   (letture ScrapeCreators, ammesse — mai un invio/pubblicazione/generazione).
+   **5 chiamate totali in questa sessione**: 2 di calibrazione (per verificare
+   la forma reale della risposta prima di scrivere il codice di parsing — vedi
+   `lib/scrapecreators.py`, il profilo vive sotto `data.user`, non alla radice)
+   + 3 dell'ingestione ufficiale (profilo + 50 post + 30 reel, di cui 12
+   effettivamente restituiti su entrambi). Risultato reale: **12 post + 12
+   reel raccolti** (2 duplicati fra i due feed scartati — vedi bug qui sotto),
+   **mediana like/views sui reel: 1,615%** — coincide con l'1,61% già misurato
+   in `BRAND-IDENTITY_sheis_2026-08-03.json` da un'altra sessione, con un
+   metodo di raccolta diverso: **conferma incrociata**, non lo stesso calcolo
+   rieseguito. Il DB non esiste ancora, quindi i 22 record (10 post + 12 reel,
+   dopo dedup) sono salvati SOLO su file locale
+   (`data/METRICHE-IG_ultima-rilevazione.json` + snapshot grezzi in
+   `data/raw/`) — `report_settimanale.py` li legge da lì come fallback
+   esplicitamente etichettato, finché `sheis_metriche_ig` non esiste.
+
+   **Bug reale trovato e corretto durante lo sviluppo**: `/v2/instagram/user/
+   posts` restituisce l'id come `<media_id>_<owner_id>`, `/v1/instagram/user/
+   reels` lo stesso media come solo `<media_id>` — gli stessi reel escono su
+   ENTRAMBI gli endpoint. Senza normalizzare l'id, lo stesso contenuto
+   generava due righe scollegate (una "post" senza view, una "reel" con le
+   view) e avrebbe fatto fallire il vincolo unique su un DB reale. Scoperto
+   confrontando gli id reali, non per ispezione del codice — vedi
+   `_normalizza_ig_id()` e la deduplica in `ingest_metriche_ig.py`, e
+   `tests/test_ingest_metriche.py`.
 
 ---
 
@@ -70,15 +98,21 @@ python3 tests/test_linter.py            # regole di marca (prezzi, negozio, clai
 python3 tests/test_firewall_m29.py      # 14 test avversariali Metodo 29
 python3 tests/test_higgsfield_gate.py   # gate di costo + tetto giornaliero
 
+python3 tests/test_ingest_metriche.py   # normalizzazione id · like/views · attribuzione
+
 python3 publisher_zernio.py             # simulazione (default)
 python3 report_settimanale.py           # simulazione (default)
 python3 creative_worker.py              # simulazione (default)
 python3 analisi_mensile.py              # simulazione (default, nessun credito)
+python3 ingest_metriche_ig.py           # simulazione (default, nessun credito)
 ```
 
-`LIVE=1` davanti a un comando abilita l'invio/pubblicazione/generazione vera.
-**Mai in questa fase**: nessuno dei quattro worker ha mai girato con `LIVE=1`
-durante lo sviluppo di questo repo.
+`LIVE=1` davanti a un comando abilita l'invio/pubblicazione/generazione vera
+(o, per `ingest_metriche_ig.py`, la lettura reale — 3 crediti ScrapeCreators
+per run). **Mai messo su publisher/creative/analisi-mensile in questa fase**:
+girano SOLO in simulazione. `ingest_metriche_ig.py` è stato eseguito con
+`LIVE=1` una volta, il 2026-08-03, per popolare la prima rilevazione reale
+(vedi sopra) — è l'unica eccezione, ed è una lettura, non un invio.
 
 ---
 
@@ -97,6 +131,7 @@ sudo systemctl enable --now sheis-publisher.timer
 sudo systemctl enable --now sheis-report.timer
 sudo systemctl enable --now sheis-creative.timer
 sudo systemctl enable --now sheis-analisi-mensile.timer
+sudo systemctl enable --now sheis-ingest-metriche.timer
 ```
 
 ⚠️ `OnCalendar` nei timer usa il timezone LOCALE del sistema (`/etc/localtime`).
@@ -113,6 +148,11 @@ Prima di aggiungere `LIVE=1` in produzione:
 - **report_settimanale**: `config/workers.json → report_email` e
   `report_telegram_chat` vanno compilati (oggi vuoti — il worker lo dichiara
   invece di fallire in silenzio).
+- **ingest_metriche_ig**: verificare il credito ScrapeCreators residuo prima
+  di attivare il timer giornaliero (3 chiamate/giorno, ~90/mese) — e applicare
+  `~/alkemia-sheis-backend/migrations/0003_metriche.sql` non appena il
+  Personal Access Token Supabase è disponibile, così le rilevazioni smettono
+  di vivere solo su file locale.
 
 ---
 
@@ -127,18 +167,20 @@ alkemia-sheis-workers/
 │   ├── canali.py          email (smtplib) + Telegram (urllib), pattern di centralino-vapi/canali.py
 │   ├── zernio.py          client REST Zernio (urllib), copia indipendente di tools/zernio_post.py
 │   ├── higgsfield.py      gate di costo (1cr=€0,033) + gestione tetto giornaliero
-│   ├── scrapecreators.py  client Instagram profile (urllib)
+│   ├── scrapecreators.py  client Instagram profilo/post/reel (urllib) + contatore chiamate reali
 │   └── dataforseo.py      client keyword search volume (urllib, Basic Auth)
 ├── publisher_zernio.py    idempotenza · linter · gate account · finestra · invio
-├── report_settimanale.py  organico + pubblicitario + outreach → email + Telegram
+├── report_settimanale.py  organico (+ affinità reel da sheis_metriche_ig) + pubblicitario + outreach → email + Telegram
 ├── creative_worker.py     3 varianti (angolo_visivo dichiarato) · gate costo · tetto giornaliero
 ├── analisi_mensile.py     ScrapeCreators + DataForSEO → file + sheis_report(tipo=mensile)
+├── ingest_metriche_ig.py  follower/like/commenti/views reali → sheis_metriche_ig (serie storica) + attribuzione a sheis_contenuti
 ├── config/workers.json    SCELTE non segrete (destinatari, mappa account) — mai chiavi API qui
-├── systemd/                8 unit (4 .service + 4 .timer), pronte da installare
+├── systemd/                10 unit (5 .service + 5 .timer), pronte da installare
 └── tests/
-    ├── test_linter.py            regole di marca dirette
-    ├── test_firewall_m29.py      i 14 test avversariali di sheis-brand-core
-    └── test_higgsfield_gate.py   gate di costo + tetto giornaliero
+    ├── test_linter.py             regole di marca dirette
+    ├── test_firewall_m29.py       i 14 test avversariali di sheis-brand-core
+    ├── test_higgsfield_gate.py    gate di costo + tetto giornaliero
+    └── test_ingest_metriche.py    normalizzazione ig_id · like/views · attribuzione (mai un aggancio indovinato)
 ```
 
 **Perché `sheis_report.tipo='mensile'` per `analisi_mensile.py`**: lo schema
@@ -154,5 +196,9 @@ dello Studio, i dati esistono già in entrambi i posti.
 
 - Regole di marca: `scalers-plus/clienti/sheis-beauty-aiconsult/data/BRAND-IDENTITY_sheis_2026-08-03.json`
 - Firewall Metodo 29: `scalers-plus/.claude/skills/sheis-brand-core/guardrails.json` + `tests/firewall-m29.md`
-- Schema DB: `~/alkemia-sheis-backend/migrations/0001_sheis_schema.sql` e `0002_studio.sql`
+- Schema DB: `~/alkemia-sheis-backend/migrations/0001_sheis_schema.sql`, `0002_studio.sql`, `0003_metriche.sql`
+  (quest'ultima scritta DA questo repo — unica eccezione al "mai scrivere negli altri repo", perché lo
+  schema DB è di competenza di `alkemia-sheis-backend`, non un file operativo di questo repo)
 - Copione/voce outreach: `~/alkemia-sheis-outreach/` (letto in sola lettura da `report_settimanale.py`)
+- Metriche IG reali: `data/METRICHE-IG_ultima-rilevazione.json` (fallback locale finché `sheis_metriche_ig`
+  non esiste) + `data/raw/` (risposte grezze ScrapeCreators, per riprocessare senza richiamare l'API)
