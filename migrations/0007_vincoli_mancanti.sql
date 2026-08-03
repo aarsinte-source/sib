@@ -37,12 +37,27 @@ alter table sheis_contenuti add  constraint sheis_contenuti_formato_check
 -- ── 2. brand: una sola grafia, ovunque ──────────────────────────────────────
 -- Si normalizzano le grafie già scritte prima di imporre il vincolo, così le
 -- righe esistenti non vengono rifiutate e nessuno perde dati.
+--
+-- ⚠️ SEI marchi, non tre. Fino al 2026-08-04 il sistema ne conosceva tre
+-- (sheis-color, babilon, younic) perché erano gli unici emersi dalle
+-- trascrizioni. Il cliente ha poi consegnato il foglio marchi completo: ne
+-- mancavano TRE — il marchio ombrello `sheis-beauty` (quello col cuore
+-- disegnato a mano), la linea `sheis-color-first` e `vr-intelligent`.
+--
+-- Questa migrazione stava per essere applicata con l'elenco vecchio: avrebbe
+-- messo un vincolo che RIFIUTA a scrittura tre marchi veri del cliente. Un
+-- vincolo sbagliato è peggio di nessun vincolo — nessun vincolo lascia passare
+-- l'errore, un vincolo sbagliato blocca il corretto e lo fa sembrare un bug
+-- del programma.
 create or replace function sheis_brand_canonico(v text) returns text as $$
   select case
     when v is null then null
     when lower(regexp_replace(v, '[\s_]+', '-', 'g')) in ('babilon') then 'babilon'
-    when lower(regexp_replace(v, '[\s_]+', '-', 'g')) in ('younic') then 'younic'
+    when lower(regexp_replace(v, '[\s_]+', '-', 'g')) in ('younic', 'you-nic') then 'younic'
+    when lower(regexp_replace(v, '[\s_]+', '-', 'g')) in ('vr-intelligent', 'vr', 'vrintelligent') then 'vr-intelligent'
+    when lower(regexp_replace(v, '[\s_]+', '-', 'g')) in ('sheis-color-first', 'sheis-first', 'color-first', 'first') then 'sheis-color-first'
     when lower(regexp_replace(v, '[\s_]+', '-', 'g')) in ('sheis-color', 'sheis-colour', 'color', 'sheiscolor') then 'sheis-color'
+    when lower(regexp_replace(v, '[\s_]+', '-', 'g')) in ('sheis-beauty', 'sheis', 'sheisbeauty', 'sheis-beauty-international') then 'sheis-beauty'
     else lower(regexp_replace(v, '[\s_]+', '-', 'g'))
   end;
 $$ language sql immutable;
@@ -52,11 +67,13 @@ update sheis_contenuti set brand = sheis_brand_canonico(brand) where brand is no
 
 alter table sheis_campagne  drop constraint if exists sheis_campagne_brand_check;
 alter table sheis_campagne  add  constraint sheis_campagne_brand_check
-  check (brand is null or brand in ('sheis-color', 'babilon', 'younic'));
+  check (brand is null or brand in
+    ('sheis-beauty', 'sheis-color', 'sheis-color-first', 'younic', 'babilon', 'vr-intelligent'));
 
 alter table sheis_contenuti drop constraint if exists sheis_contenuti_brand_check;
 alter table sheis_contenuti add  constraint sheis_contenuti_brand_check
-  check (brand is null or brand in ('sheis-color', 'babilon', 'younic'));
+  check (brand is null or brand in
+    ('sheis-beauty', 'sheis-color', 'sheis-color-first', 'younic', 'babilon', 'vr-intelligent'));
 
 -- Nota per chi legge fra sei mesi: il vincolo NON sostituisce la
 -- normalizzazione a monte. Serve a far fallire rumorosamente chi sbaglia,
