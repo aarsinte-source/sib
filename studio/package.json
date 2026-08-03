@@ -1,0 +1,35 @@
+{
+  "name": "alkemia-sheis-studio",
+  "version": "1.0.0",
+  "private": true,
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "next dev --port 3330",
+    "build": "next build",
+    "start": "next start --port 3330",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run typecheck && npm run build",
+    "test:flow": "tsx scripts/test-flow.ts",
+    "seed:utente": "node scripts/seed-utente.mjs"
+  },
+  "dependencies": {
+    "next": "16.2.1",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "server-only": "^0.0.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^24",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.1",
+    "tailwindcss": "^4",
+    "tsx": "^4.19.0",
+    "typescript": "^5"
+  }
+}

@@ -1,0 +1,292 @@
+{
+  "_meta": {
+    "purpose": "Guardrail machine-readable del dipartimento AI SHEis. Tre domini DISTINTI, da non confondere tra loro: (1) FIREWALL METODO 29 — divieto assoluto e TRASVERSALE, vale su ogni canale e ogni audience; (2) audience_policy — regole opposte per audience diversa (hype/campagna d'attesa AMMESSA verso la rete distributori, VIETATA verso il mercato pubblico: NON è un divieto trasversale); (3) zone_exclusivity_gate — gate di routing dei lead-salone verso il distributore titolare di zona, non verso SHEis direttamente. Ogni agente del dipartimento deve consultare questo file prima di produrre output pubblico (domini 1-2) o di instradare un lead (dominio 3).",
+    "narrative_source": "SKILL.md §1 (dominio 1, firewall M29) + SKILL.md §7-bis (domini 2-3, audience policy e zone esclusive)",
+    "test_suite": "tests/firewall-m29.md — copre SOLO il dominio 1 (firewall M29). I domini 2-3 non hanno ancora una suite di test dedicata.",
+    "rule_owner": "Mauro Di Bonaventura",
+    "rule_statement": "Metodo 29 non deve mai risultare pubblicamente collegato a SHEis Beauty International.",
+    "rule_quote": {
+      "text": "Metodo 29 però non si deve sapere che è sotto She is Beauty International cioè questo la gente AI lo deve sapere ma deve sapere di non rivelare mai queste informazioni",
+      "ref": "fca1777b · 08:18"
+    },
+    "architecture_quote": {
+      "text": "Vabbè, questo della M29 ci dobbiamo mettere nell'intero sistema il fatto che non sono connessi. Quindi un team di agenti concettualmente dedicato solamente a M29.",
+      "ref": "b7fe5124 · 18:17"
+    },
+    "open_question": {
+      "text": "se Metodo 29 sia dentro o fuori i €10.000 dell'accordo Marketing + Commerciale",
+      "status": "DA CONFERMARE con Mauro"
+    },
+    "blocking_inputs": [
+      {
+        "what": "Mappa delle zone esclusive per distributore (quale distributore copre quale area/provincia/regione in Italia)",
+        "status": "MANCANTE — bloccante per l'automazione del routing dei lead-salone",
+        "action": "Da chiedere a Mauro prima che qualunque agente instradi lead-saloni in autonomia. Finché manca, ogni lead-salone generato resta in coda per revisione umana — vedi zone_exclusivity_gate.routing_logic step 5."
+      }
+    ],
+    "last_updated": "2026-07-20",
+    "revision_note": "2026-07-20: aggiunti audience_policy e zone_exclusivity_gate dopo verifica avversariale sulle trascrizioni — correggono un errore che sarebbe stato commesso (divieto hype trasversale, instradamento lead-salone senza check zona). Firewall M29 (dominio 1) invariato."
+  },
+  "worlds": {
+    "world_sheis": {
+      "label": "Mondo SHEis",
+      "entities": [
+        {
+          "id": "sheis_company",
+          "canonical": "SHEis Beauty International",
+          "type": "company",
+          "aliases": [
+            "SHEis Beauty International S.r.l.",
+            "SHEis Beauty",
+            "She is Beauty International",
+            "Sheis",
+            "SHEis"
+          ]
+        },
+        {
+          "id": "sheis_color",
+          "canonical": "SHEis Color",
+          "type": "brand",
+          "aliases": [
+            "Sheis Color"
+          ]
+        },
+        {
+          "id": "babilon",
+          "canonical": "BABILON",
+          "type": "brand",
+          "aliases": [
+            "Babilon"
+          ]
+        },
+        {
+          "id": "younic",
+          "canonical": "YOUNIC",
+          "type": "brand",
+          "aliases": [
+            "Younic"
+          ]
+        },
+        {
+          "id": "mauro",
+          "canonical": "Mauro Di Bonaventura",
+          "type": "person",
+          "aliases": [
+            "Mauro",
+            "Di Bonaventura"
+          ]
+        },
+        {
+          "id": "pineto",
+          "canonical": "Pineto",
+          "type": "location",
+          "aliases": [
+            "Pineto (TE)",
+            "Pineto Teramo"
+          ]
+        }
+      ]
+    },
+    "world_m29": {
+      "label": "Mondo Metodo 29",
+      "entities": [
+        {
+          "id": "metodo29",
+          "canonical": "Metodo 29",
+          "type": "brand",
+          "aliases": [
+            "M29",
+            "Metodo29",
+            "Metodo Ventinove"
+          ]
+        }
+      ]
+    }
+  },
+  "forbidden_pairs": [
+    {
+      "a": "sheis_company",
+      "b": "metodo29"
+    },
+    {
+      "a": "sheis_color",
+      "b": "metodo29"
+    },
+    {
+      "a": "babilon",
+      "b": "metodo29"
+    },
+    {
+      "a": "younic",
+      "b": "metodo29"
+    },
+    {
+      "a": "mauro",
+      "b": "metodo29"
+    },
+    {
+      "a": "pineto",
+      "b": "metodo29"
+    }
+  ],
+  "separated_channels": {
+    "social": {
+      "rule": "Pagina/account social dedicati e separati per ciascuno dei due mondi. Nessun account può seguire, taggare o menzionare l'altro.",
+      "source": "6b6cc1a3 · 1:59:27"
+    },
+    "sito": {
+      "rule": "Sito web separato per Metodo 29 (€2.500 una tantum), infrastruttura di dominio/hosting distinta da sheishair.com.",
+      "source": "fca1777b · 10:48"
+    },
+    "pixel": {
+      "rule": "Mai lo stesso pixel Meta/Google/TikTok tra i due mondi. Ad account distinti.",
+      "source": null
+    },
+    "audience": {
+      "rule": "Mai la stessa audience pubblicitaria (custom audience, lookalike, retargeting) tra i due mondi. Le liste di remarketing non si condividono né si incrociano.",
+      "source": null
+    },
+    "liste": {
+      "rule": "Mai la stessa lista email/WhatsApp/CRM tra i due mondi. Un contatto raccolto in un mondo non entra nelle liste dell'altro senza opt-in esplicito e separato.",
+      "source": null
+    }
+  },
+  "forbidden_actions": [
+    {
+      "code": "cross_promotion",
+      "label": "Cross-promotion",
+      "description": "Promuovere Metodo 29 in un canale SHEis o viceversa (\"scopri anche\", storie in evidenza incrociate, menzioni in caption).",
+      "expected_behavior": "L'agente non genera MAI contenuto che nomini o alluda all'altro mondo in un canale del primo."
+    },
+    {
+      "code": "link_incrociati",
+      "label": "Link incrociati",
+      "description": "Link diretto o indiretto (bio, footer, blog, sitemap, linktree) tra i siti/canali dei due mondi.",
+      "expected_behavior": "Nessun link, redirect o menzione di dominio tra i due siti/canali."
+    },
+    {
+      "code": "bio_condivise",
+      "label": "Bio condivise",
+      "description": "Bio social, footer sito, firma email o materiale stampa che citi entrambi i mondi o un fondatore/organigramma condiviso.",
+      "expected_behavior": "Ogni bio/footer/firma cita solo il mondo di appartenenza."
+    },
+    {
+      "code": "audience_condivise",
+      "label": "Audience/pixel/liste condivise",
+      "description": "Riuso di pixel, custom audience, lookalike o liste email/WhatsApp tra i due mondi (vedi separated_channels).",
+      "expected_behavior": "Infrastruttura ads e CRM sempre separata e non incrociata."
+    },
+    {
+      "code": "conferma_o_smentita_esplicita",
+      "label": "Conferma o smentita esplicita in pubblico",
+      "description": "Rispondere a una domanda pubblica (cliente, giornalista, follower) confermando O negando esplicitamente il collegamento — negarlo esplicitamente rivela comunque che l'agente conosce il fatto.",
+      "expected_behavior": "Risposta neutra che non conferma né nega in modo da rivelare la conoscenza del collegamento (es. rimando a canali ufficiali, cambio di argomento, \"non è un'informazione che gestisco io\")."
+    },
+    {
+      "code": "menzione_organigramma_o_dati_societari",
+      "label": "Menzione organigramma / dati societari condivisi",
+      "description": "Citare Mauro Di Bonaventura, l'indirizzo di Pineto, la P.IVA o l'organigramma SHEis in materiale M29 pubblico (o viceversa).",
+      "expected_behavior": "Materiale M29 pubblico non cita mai persone, sede o dati societari di SHEis."
+    }
+  ],
+  "audience_policy": {
+    "_warning": "NON applicare la regola 'niente hype' in modo trasversale. È una regola PER AUDIENCE, con esito OPPOSTO tra le due. Un divieto trasversale bloccherebbe una pratica che Mauro fa abitualmente verso la rete — il sistema sembrerebbe rotto al primo output.",
+    "rete": {
+      "label": "Rete — distributori e importatori (attuali o in trattativa)",
+      "channels": [
+        "email diretta ai distributori",
+        "WhatsApp verso la rete",
+        "materiali B2B riservati",
+        "comunicazioni pre-lancio ai punti vendita/distributori"
+      ],
+      "campagna_attesa": "AMMESSA — pratica abituale del cliente, non un'eccezione da autorizzare caso per caso.",
+      "hype_pre_lancio": "AMMESSO verso questa audience.",
+      "source": {
+        "text": "io faccio anche campagna attesa in questo senso, prima che esce un prodotto gli mando un video, gli mando delle informazioni, una foto, lo faccio spesso, la campagna attesa la faccio spesso, quasi sempre",
+        "ref": "6b6cc1a3 · 2:44:58"
+      }
+    },
+    "mercato": {
+      "label": "Mercato — saloni non ancora clienti, pubblico, social organico/ads pubbliche",
+      "channels": [
+        "social organico pubblico",
+        "ads pubbliche",
+        "sito pubblico",
+        "PR/stampa",
+        "SEO/contenuti pubblici"
+      ],
+      "campagna_attesa": "VIETATA.",
+      "hype_pre_lancio": "VIETATO — nessun annuncio prima del lancio effettivo.",
+      "source": {
+        "text": "Non facciamo campagne hype, non facciamo niente, non annunciamo niente prima.",
+        "ref": "6b6cc1a3 · 2:08:50"
+      }
+    }
+  },
+  "zone_exclusivity_gate": {
+    "rule": "Ogni lead-salone generato dal dipartimento va instradato al distributore titolare della zona esclusiva di competenza, non gestito/venduto direttamente da SHEis — salvo che la zona sia scoperta.",
+    "source_rule": {
+      "text": "Di regola non gli posso vendere, a meno che la zona non è scoperta. Allora me lo prendo io come azienda",
+      "ref": "6b6cc1a3 · 45:23"
+    },
+    "source_zone": {
+      "text": "una zona esclusiva data da me",
+      "ref": "6b6cc1a3 · 41:54"
+    },
+    "owner_agent": "sheis-saloni-engine — implementa questo gate come motore primario per i lead-salone (audience + lead singoli).",
+    "consumer_agents": [
+      "sheis-open-day (riusa il gate, non lo riscrive)",
+      "sheis-riattivatore-rete (riceve i dossier zona-coperta consegnati da sheis-saloni-engine)",
+      "sheis-outreacher",
+      "sheis-media-buyer",
+      "sheis-audience-builder"
+    ],
+    "routing_logic": [
+      "1. Determina la zona geografica del lead-salone.",
+      "2. Verifica se la zona è coperta da un distributore in esclusiva (richiede la mappa zone, vedi blocking_inputs in _meta).",
+      "3. Se COPERTA → instrada il lead al distributore titolare della zona. SHEis non lo gestisce/vende direttamente.",
+      "4. Se SCOPERTA → SHEis può gestire il lead direttamente.",
+      "5. Se lo stato della zona è SCONOSCIUTO (mappa mancante o incompleta) → NON instradare in automatico: escalation umana a Mauro. Meglio un lead in coda che un incidente politico con un distributore."
+    ]
+  },
+  "launch_gate": {
+    "rule": "Nessun contenuto di lancio prodotto esce verso il mercato prima della riunione nazionale distributori. Verso la rete resta regolato da audience_policy.rete, non da questo gate.",
+    "owner_agent": "sheis-lancio-prodotto — scrive lo stato verificabile.",
+    "state_file_pattern": "clienti/sheis-beauty-aiconsult/launch/LAUNCH-GATE_<prodotto>_<YYYY-MM-DD>.md",
+    "state_field": "riunione_distributori_completata: true|false (nel frontmatter del file)",
+    "readers_before_publish": [
+      "sheis-redazione",
+      "sheis-media-buyer",
+      "sheis-studio-visivo",
+      "sheis-video-ugc",
+      "sheis-social-publisher-zernio",
+      "sheis-social-media-manager"
+    ],
+    "if_false_or_missing": "pubblicare SOLO verso audience 'rete' (vedi audience_policy.rete), mai verso 'mercato'.",
+    "unlock_authority": "Solo Mauro o Andrei. Nessun agente si autorizza da solo a passare da rete a mercato.",
+    "source": {
+      "text": "noi lanciamo prima il distributore e poi lanciamo fuori. Mauro pianifica una riunione nazionale con i distributori italiani ed esteri",
+      "ref": "6b6cc1a3 · 2:07:43"
+    },
+    "source_confirmation": {
+      "text": "So che non devo pubblicare prima",
+      "ref": "6b6cc1a3 · 2:22:33"
+    }
+  },
+  "pre_publish_checklist": [
+    "Il testo/asset contiene ENTRAMBE un'entità di world_sheis e un'entità di world_m29 (anche per alias)? → BLOCCA.",
+    "Il canale di destinazione (social/sito/ads/email) è quello corretto per il mondo del contenuto? → verifica in separated_channels.",
+    "L'audience/pixel/lista usata per la pubblicazione è dedicata a QUEL mondo? → verifica in separated_channels.audience/pixel/liste.",
+    "Se il contenuto risponde a una domanda diretta o obliqua sul collegamento → applica forbidden_actions.conferma_o_smentita_esplicita.",
+    "Il contenuto è hype/campagna-attesa/annuncio pre-lancio? → determina l'audience (rete o mercato) e applica audience_policy.<segmento>: NON è un divieto trasversale, è opposto tra le due.",
+    "Il contenuto riguarda il lancio di un prodotto e va verso il mercato? → leggi il LAUNCH-GATE (launch_gate.state_file_pattern) PRIMA di pubblicare, non assumere che la riunione distributori sia già avvenuta.",
+    "Se fallisce anche un solo controllo → non pubblicare, esegui la suite tests/firewall-m29.md prima del go-live."
+  ],
+  "pre_lead_routing_checklist": [
+    "Il lead è un salone (potenziale cliente finale della rete), non un distributore/importatore? → applica zone_exclusivity_gate.",
+    "La zona geografica del lead-salone è nota e la mappa zone-distributore è disponibile? Se NO → STOP, escalation umana a Mauro (blocking_inputs in _meta).",
+    "La zona è coperta da un distributore in esclusiva? Se SÌ → instrada il lead al distributore, non trattenerlo.",
+    "La zona è scoperta? Se SÌ → SHEis può gestire il lead direttamente.",
+    "Il lead è invece un distributore/importatore (non un salone)? → zone_exclusivity_gate non si applica: instrada normalmente a sheis-scout-estero/sheis-cacciatore-italia."
+  ]
+}
