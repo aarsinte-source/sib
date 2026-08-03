@@ -2,7 +2,7 @@ import "server-only";
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { scegli, formatoPer, GATE } from "@/lib/modelli-creativi";
+import { scegli, formatoPer, formatoAmmesso, GATE } from "@/lib/modelli-creativi";
 import type { Brand, Formato } from "@/lib/brand";
 import { BRAND_LABEL, VALORI_ASSE, asseVarianteDeterministico, type AsseVariante } from "@/lib/brand";
 import {
@@ -92,7 +92,7 @@ export function costruisciVarianti(input: {
 }
 
 export type EsitoGenerazione =
-  | { ok: true; assetUrl: string; costoCrediti: number; costoEur: number }
+  | { ok: true; assetUrl: string; costoCrediti: number; costoEur: number; nota?: string }
   | { ok: false; errore: string; tettoRaggiunto: boolean };
 
 /**
@@ -153,9 +153,15 @@ export async function generaImmagine(
   // preferenza: una grafica quadrata dentro una storia lascia due bande vuote.
   // Il canale VINCE sul default del catalogo — il default serve a quando il
   // canale non si sa, non a sovrascriverlo quando si sa.
+  let notaFormato = "";
   if (opzioni.canale) {
-    const f = formatoPer(opzioni.canale);
-    if (f !== "auto") {
+    const richiesto = formatoPer(opzioni.canale);
+    if (richiesto !== "auto") {
+      // ⚠️ Il modello potrebbe non accettare quel formato: GPT Image 2 rifiuta
+      // il 4:5, che è proprio quello del feed Instagram. Si prende il più
+      // vicino e si dichiara.
+      const [f, nota] = formatoAmmesso(lavoro, richiesto);
+      notaFormato = nota;
       const i = parametri.indexOf("--aspect_ratio");
       if (i >= 0) parametri[i + 1] = f;
       else parametri.push("--aspect_ratio", f);
@@ -200,7 +206,7 @@ export async function generaImmagine(
     };
   }
 
-  return { ok: true, assetUrl, costoCrediti: crediti, costoEur: eur };
+  return { ok: true, assetUrl, costoCrediti: crediti, costoEur: eur, nota: notaFormato || undefined };
 }
 
 /**

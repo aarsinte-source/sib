@@ -3,6 +3,7 @@ import { getSessione, RUOLO_LABEL } from "@/lib/auth";
 import LogoutButton from "@/components/LogoutButton";
 
 const VOCI = [
+  { href: "/cruscotto", label: "Cruscotto" },
   { href: "/analisi", label: "Analisi" },
   { href: "/piano", label: "Piano" },
   { href: "/creativita", label: "Creatività" },

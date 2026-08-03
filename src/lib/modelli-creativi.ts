@@ -1,7 +1,7 @@
 /**
  * GENERATO da sincronizza_modelli.py — NON modificare a mano.
  * 
- * Viene da modelli-creativi.json (impronta 039fbb8c626a3848). Cambiare qui il
+ * Viene da modelli-creativi.json (impronta dd6d9a7182da3d9f). Cambiare qui il
  * modello significa farlo divergere dall'altro sistema, che è esattamente
  * il difetto per cui questo file esiste.
  * 
@@ -9,40 +9,72 @@
  *     python3 ~/alkemia-sheis-backend/sincronizza_modelli.py --allinea
  * 
  */
-export const IMPRONTA_FONTE = "039fbb8c626a3848";
+export const IMPRONTA_FONTE = "dd6d9a7182da3d9f";
 export const CREDITO_EUR = 0.033;
 
 export const LAVORI = {
   "grafica": {
     "descrizione": "Locandine, caroselli, inserzioni statiche, infografiche — tutto ciò che ha del TESTO dentro l'immagine.",
-    "modello": "nano_banana_2",
-    "nome_umano": "Nano Banana Pro",
-    "crediti": 2,
-    "perche": "È il migliore sul testo dentro l'immagine, che è il punto debole di quasi tutti i generatori: un carosello con la parola sbagliata non si pubblica. In più ha la fedeltà geometrica più alta misurata su prodotto (IoU 0,982 sul lavoro Mc&Co), quindi un flacone non si deforma.",
+    "modello": "gpt_image_2",
+    "nome_umano": "GPT Image 2",
+    "crediti": 7,
+    "perche": "Scelto da Andrei il 2026-08-03 per tutte le immagini. Costa 7 crediti contro i 2 di Nano Banana Pro, ma la scelta è del cliente e la resa del testo dentro l'immagine è la sua ragione d'essere.",
     "parametri": {
+      "quality": "high",
       "resolution": "2k",
-      "aspect_ratio": "4:5"
-    }
+      "aspect_ratio": "3:4"
+    },
+    "formati_supportati": [
+      "1:1",
+      "4:3",
+      "3:4",
+      "16:9",
+      "9:16",
+      "3:2",
+      "2:3"
+    ]
   },
   "grafica-bozza": {
     "descrizione": "Passate esplorative: molte varianti per capire quale direzione tenere, prima di produrre quella buona.",
-    "modello": "seedream_v5_lite",
-    "nome_umano": "Seedream 5.0 Lite",
-    "crediti": 1,
-    "perche": "Metà del costo. Su una batteria di dodici tentativi la differenza è €0,40 contro €0,79: sembra poco, ma è la differenza fra esplorare e razionare. La resa finale si rifà col modello buono.",
+    "modello": "gpt_image_2",
+    "nome_umano": "GPT Image 2 (qualità bozza)",
+    "crediti": 0,
+    "perche": "Stesso modello della resa finale, a qualità bassa. Misurato il 2026-08-03: a qualità «low» e 2k il preventivo è di ZERO crediti — le passate esplorative non costano nulla. Si esplora quanto serve e si rifà col buono.",
     "parametri": {
-      "aspect_ratio": "4:5"
-    }
+      "quality": "low",
+      "resolution": "2k",
+      "aspect_ratio": "3:4"
+    },
+    "formati_supportati": [
+      "1:1",
+      "4:3",
+      "3:4",
+      "16:9",
+      "9:16",
+      "3:2",
+      "2:3"
+    ]
   },
   "foto-prodotto": {
     "descrizione": "Packshot, prodotto in scena, still life. Il prodotto deve restare SE STESSO.",
-    "modello": "nano_banana_2",
-    "nome_umano": "Nano Banana Pro",
-    "crediti": 2,
-    "perche": "Stessa ragione della grafica, ma qui la fedeltà è tutto: un tubo di colore ridisegnato dal generatore non è più il prodotto del cliente. Quando c'è un render vero, va passato come immagine di riferimento invece di descriverlo a parole.",
+    "modello": "gpt_image_2",
+    "nome_umano": "GPT Image 2",
+    "crediti": 7,
+    "perche": "Scelto da Andrei per tutte le immagini. ⚠️ Nota misurata su un altro lavoro: sulla FEDELTÀ GEOMETRICA di un prodotto reale il migliore resta Nano Banana Pro (IoU 0,982). Quando il flacone deve restare identico a sé stesso, vale la pena riconsiderarlo.",
     "parametri": {
-      "resolution": "2k"
-    }
+      "quality": "high",
+      "resolution": "2k",
+      "aspect_ratio": "1:1"
+    },
+    "formati_supportati": [
+      "1:1",
+      "4:3",
+      "3:4",
+      "16:9",
+      "9:16",
+      "3:2",
+      "2:3"
+    ]
   },
   "ugc-video": {
     "descrizione": "Video UGC con una persona che parla o agisce in una situazione reale — il format che per SHEis ha già funzionato (caso Lazzari: 8 clienti in 5 mesi).",
@@ -55,7 +87,16 @@ export const LAVORI = {
       "generate_audio": true,
       "bitrate_mode": "standard"
     },
-    "attenzione": "⚠️ Misurato su un altro lavoro: a 4K e 10 secondi va in timeout e il costo resta a carico. Restare su durate brevi e risoluzione standard."
+    "attenzione": "⚠️ Misurato su un altro lavoro: a 4K e 10 secondi va in timeout e il costo resta a carico. Restare su durate brevi e risoluzione standard.",
+    "formati_supportati": [
+      "auto",
+      "16:9",
+      "9:16",
+      "4:3",
+      "3:4",
+      "1:1",
+      "21:9"
+    ]
   },
   "ugc-video-bozza": {
     "descrizione": "La stessa scena, per capire se l'idea regge prima di spendere il triplo.",
@@ -66,7 +107,16 @@ export const LAVORI = {
     "parametri": {
       "duration": 5,
       "generate_audio": true
-    }
+    },
+    "formati_supportati": [
+      "auto",
+      "16:9",
+      "9:16",
+      "4:3",
+      "3:4",
+      "1:1",
+      "21:9"
+    ]
   },
   "video-breve": {
     "descrizione": "Movimento semplice su un prodotto o una grafica: nessuno che parla, nessuna scena complessa.",
@@ -76,7 +126,16 @@ export const LAVORI = {
     "perche": "Un quinto del costo di Seedance 2.0. Per animare un packshot non serve un modello che sa recitare.",
     "parametri": {
       "duration": 5
-    }
+    },
+    "formati_supportati": [
+      "auto",
+      "16:9",
+      "9:16",
+      "4:3",
+      "3:4",
+      "1:1",
+      "21:9"
+    ]
   }
 } as const;
 
@@ -109,6 +168,7 @@ export type Lavoro = {
   crediti: number;
   perche: string;
   parametri: Record<string, string | number | boolean>;
+  formati_supportati?: readonly string[];
   attenzione?: string;
 };
 
@@ -134,6 +194,36 @@ export function scegli(lavoro: string): Lavoro {
  */
 export function formatoPer(canale: string): string {
   return (FORMATO_PER_CANALE as Record<string, string>)[canale] ?? "auto";
+}
+
+function rapporto(f: string): number {
+  const [a, b] = f.split(":").map(Number);
+  return b ? a / b : 1;
+}
+
+/**
+ * [formatoDaUsare, spiegazioneSeSostituito].
+ *
+ * ⚠️ Non tutti i modelli accettano tutti i formati: GPT Image 2 rifiuta il 4:5,
+ * che è proprio quello del feed Instagram. Misurato il 2026-08-03.
+ *
+ * Quando il formato chiesto non c'è si prende il PIÙ VICINO per proporzione e
+ * si restituisce la spiegazione. Sostituire in silenzio significherebbe
+ * consegnare grafiche del formato sbagliato senza che nessuno se ne accorga.
+ */
+export function formatoAmmesso(lavoro: string, formato: string): [string, string] {
+  const l = scegli(lavoro) as Lavoro & { formati_supportati?: readonly string[] };
+  const ammessi = l.formati_supportati ?? [];
+  if (ammessi.length === 0 || ammessi.includes(formato)) return [formato, ""];
+  const candidati = ammessi.filter((f) => f !== "auto");
+  if (candidati.length === 0) return [formato, ""];
+  const vicino = candidati.reduce((a, b) =>
+    Math.abs(rapporto(b) - rapporto(formato)) < Math.abs(rapporto(a) - rapporto(formato)) ? b : a,
+  );
+  return [
+    vicino,
+    `il formato ${formato} non è supportato da ${l.nome_umano}: uso ${vicino}, che è il più vicino`,
+  ];
 }
 
 export function costoEur(lavoro: string, quante = 1): number {
