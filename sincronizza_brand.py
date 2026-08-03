@@ -100,6 +100,9 @@ def _estrai(fonte: Path) -> dict:
         "eccezioni": va.get("eccezioni_radice", []),
         "prezzo": va["prezzi_e_cifre_commerciali"],
         "firewall": va["firewall"],
+        "firewall_pattern": va.get("firewall_pattern", []),
+        "flesse": va.get("forme_flesse", []),
+        "negazioni": va.get("negazioni_ammesse", []),
         "claim": d["lessico"].get("claim_vietati", []),
         "cta_ammesse": rg.get("cta_ammesse", []),
         "cta_vietate": rg.get("cta_vietate", []),
@@ -132,6 +135,14 @@ def _genera_python(v: dict) -> str:
         "# I claim sono FORME, non parole: «clinicamente provata» al femminile\n"
         "# sfuggiva a chi cercava «provato».\n"
         f"CLAIM_VIETATI = {json.dumps(v['claim'], ensure_ascii=False, indent=4)}\n\n"
+        "# Il firewall come FORME, non stringhe: «metodo-29» col trattino e la\n"
+        "# parafrasi «ventinove passi ... metodo» sfuggivano a un elenco letterale.\n"
+        f"FIREWALL_PATTERN = {json.dumps(v['firewall_pattern'], ensure_ascii=False, indent=4)}\n\n"
+        "# Forme che il confronto per radice non prende: «sklepie» (radice di 5\n"
+        "# caratteri) e «gekauft» (il prefisso GE- spezza il confine di parola).\n"
+        f"FORME_FLESSE = {json.dumps(v['flesse'], ensure_ascii=False, indent=4)}\n\n"
+        "# Frasi che NEGANO il canale: sono testo approvato, non violazioni.\n"
+        f"NEGAZIONI_AMMESSE = {json.dumps(v['negazioni'], ensure_ascii=False, indent=4)}\n\n"
         f"CTA_AMMESSE = {json.dumps(v['cta_ammesse'], ensure_ascii=False, indent=4)}\n\n"
         f"CTA_VIETATE = {json.dumps(v['cta_vietate'], ensure_ascii=False, indent=4)}\n\n"
         "# Un numero passa solo se corrisponde a `pattern` E `contesto_richiesto`\n"
@@ -170,8 +181,30 @@ def _radice(termine: str) -> str:
 
 
 PATTERN_NEGOZIO = [
-    (_radice(t), f"lessico da negozio vietato: «{t}»") for t in NEGOZIO
+    (_radice(t), f"lessico da negozio vietato: «{t}»") for t in NEGOZIO + FORME_FLESSE
 ]
+
+_NEGAZIONI_RE = [_re.compile(p, _re.IGNORECASE) for p in NEGAZIONI_AMMESSE]
+
+
+def nega_il_canale(testo: str) -> bool:
+    """La frase NEGA il canale invece di proporlo?
+
+    «Non siamo in vendita online, né Amazon né e-commerce nostro» è testo
+    approvato: è la leva di SHEis, non la violazione. Un filtro che lo
+    blocca viene disattivato da chi lo usa."""
+    return any(p.search(testo) for p in _NEGAZIONI_RE)
+
+
+def viola_firewall(testo: str):
+    """(True, motivo) se il testo evoca il marchio protetto, in qualunque
+    grafia o parafrasi. È la regola che il cliente ha dichiarato non
+    negoziabile: qui non si fanno eccezioni."""
+    for f in FIREWALL_PATTERN:
+        m = _re.search(f["pattern"], testo, _re.IGNORECASE)
+        if m:
+            return True, f'{f["cosa"]} → «{m.group(0)[:60]}»'
+    return False, ""
 
 _ECCEZIONI_RE = _re.compile(
     r"\\b(" + "|".join(_re.escape(e) for e in ECCEZIONI_RADICE) + r")\\b", _re.IGNORECASE
@@ -217,6 +250,12 @@ def _genera_js(v: dict, tipizzato: bool) -> str:
         "// sfuggiva a chi cercava «provato».\n"
         f"export const CLAIM_VIETATI{': { pattern: string; cosa: string }[]' if tipizzato else ''}"
         f" = {json.dumps(v['claim'], ensure_ascii=False, indent=2)};\n\n"
+        f"export const FIREWALL_PATTERN{': { pattern: string; cosa: string }[]' if tipizzato else ''}"
+        f" = {json.dumps(v['firewall_pattern'], ensure_ascii=False, indent=2)};\n\n"
+        f"export const FORME_FLESSE{': string[]' if tipizzato else ''}"
+        f" = {json.dumps(v['flesse'], ensure_ascii=False, indent=2)};\n\n"
+        f"export const NEGAZIONI_AMMESSE{': string[]' if tipizzato else ''}"
+        f" = {json.dumps(v['negazioni'], ensure_ascii=False, indent=2)};\n\n"
         f"export const CTA_AMMESSE = {json.dumps(v['cta_ammesse'], ensure_ascii=False, indent=2)};\n\n"
         f"export const CTA_VIETATE = {json.dumps(v['cta_vietate'], ensure_ascii=False, indent=2)};\n\n"
         "// Un numero passa solo se corrisponde a `pattern` E `contesto_richiesto`\n"
