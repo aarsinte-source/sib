@@ -1,5 +1,9 @@
 -- =============================================================================
 -- SHEis — vincoli sul vocabolario (2026-08-03)
+-- Rinumerata da 0004 a 0005: due squadre diverse avevano scritto un 0004 nello
+-- stesso momento (0004_studio_articoli.sql). I vincoli devono girare PER ULTIMI,
+-- dopo che tutte le colonne esistono: un CHECK su una colonna non ancora creata
+-- fallisce, e l'ordine alfabetico e quello logico devono coincidere.
 --
 -- PERCHÉ ESISTE
 -- La prova d'insieme fra i sei repository ha misurato 9 divergenze su 15
