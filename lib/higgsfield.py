@@ -26,7 +26,7 @@ import shutil
 import subprocess
 from dataclasses import dataclass
 
-from .modelli_creativi import CREDITO_EUR, GATE, formato_per, scegli
+from .modelli_creativi import CREDITO_EUR, GATE, formato_ammesso, formato_per, scegli
 
 EUR_PER_CREDITO = CREDITO_EUR
 SOGLIA_EUR_DEFAULT = GATE["soglia_eur_default"]
@@ -189,12 +189,21 @@ def genera_per_lavoro(prompt: str, lavoro: str = "grafica", canale: str | None =
     # usciva in 4:5, cioè con due bande vuote nel posto dove sarebbe stata
     # vista. Il default esiste per quando il canale non si sa, non per
     # sovrascriverlo quando si sa.
+    nota = ""
     if canale:
         f = formato_per(canale)
         if f != "auto":
+            # ⚠️ Il modello scelto potrebbe non accettare quel formato: GPT
+            # Image 2 rifiuta il 4:5, che è proprio quello del feed Instagram.
+            # Si prende il più vicino e si DICE — una grafica del formato
+            # sbagliato consegnata in silenzio si scopre solo a post pubblicato.
+            f, nota = formato_ammesso(lavoro, f)
             extra["aspect_ratio"] = f
-    return genera_variante(prompt, modello=s["modello"], crediti_stimati=s["crediti"],
-                           live=live, parametri=extra)
+    esito = genera_variante(prompt, modello=s["modello"], crediti_stimati=s["crediti"],
+                            live=live, parametri=extra)
+    if nota:
+        esito.errore = f"{esito.errore} · {nota}".strip(" ·")
+    return esito
 
 
 def genera_variante(prompt: str, modello: str = "nano_banana_2",
