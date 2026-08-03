@@ -24,9 +24,39 @@ Nessuna eccezione silenziosa: se un testo passa, `LintResult.ok` è True e basta
 from __future__ import annotations
 
 import re
+import unicodedata
 from dataclasses import dataclass, field
 
 BLOCK, WARN = "BLOCK", "WARN"
+
+# ⚠️ REGRESSIONE ⑥b (revisione avversariale 2026-08-03): un carattere
+# invisibile o non-\w inserito DENTRO una parola vietata ("sh​op",
+# "car​rello", "acqui\xa0sta") spezza il confine \b che tutte le regole
+# usano — "sh" e "op" diventano due token separati, nessuno dei due combacia
+# con "shop". Sia lo zero-width space (U+200B) sia il NBSP (U+00A0) sono
+# non-\w per il modulo `re`: entrambi rompono la tokenizzazione allo stesso
+# modo, quindi entrambi vanno RIMOSSI (non sostituiti con uno spazio, che
+# lascerebbe comunque due token separati) prima di qualunque controllo.
+CARATTERI_INVISIBILI = re.compile(
+    "[" + "".join([
+        "​",  # zero width space
+        "‌",  # zero width non-joiner
+        "‍",  # zero width joiner
+        "⁠",  # word joiner
+        "﻿",  # zero width no-break space / BOM
+        "­",  # soft hyphen
+        " ",  # non-breaking space — nessun uso legittimo nel copy SHEis
+        "‎", "‏",  # left/right-to-left mark
+    ]) + "]"
+)
+
+
+def _normalizza_testo(testo: str) -> str:
+    """Rimuove caratteri invisibili/non-\\w usati per spezzare una parola
+    vietata a metà, e normalizza le forme di compatibilità Unicode (es.
+    varianti a larghezza intera). Va chiamata PRIMA di qualunque pattern."""
+    t = CARATTERI_INVISIBILI.sub("", testo)
+    return unicodedata.normalize("NFKC", t)
 
 
 @dataclass
@@ -70,7 +100,17 @@ class LintResult:
 # ---------------------------------------------------------------- 1. prezzi
 PREZZO_PATTERNS = [
     (r"[€$£]\s?\d", "simbolo di valuta seguito da una cifra"),
-    (r"\b\d+[.,]?\d*\s?(euro|eur|dollari|usd|dollars)\b", "importo esplicito"),
+    (r"\b\d+[.,]?\d*\s?(euro|eur|dollari|usd|dollars)\b", "importo esplicito in cifre"),
+    # ⚠️ REGRESSIONE ⑥a (revisione avversariale 2026-08-03): "Il trattamento
+    # costa duecento euro" passava indisturbato — il pattern sopra pretende
+    # SEMPRE una cifra accanto alla valuta, ed è esattamente così che un
+    # testo generato scriverebbe un prezzo per eleganza (in lettere). Invece
+    # di inseguire ogni numerale italiano scritto per esteso (cento, mille,
+    # duecentocinquanta, ...), si blocca la parola-valuta NUDA: SHEis non ha
+    # mai un motivo legittimo di nominare "euro"/"dollari" in un contenuto —
+    # non vende online, non mostra prezzi in nessuna forma (brand-core §7).
+    (r"\b(euro|euros|dollari|dollar|dollars|sterline|pound|pounds|centesimi|cents)\b",
+     "valuta nominata (anche in lettere, senza cifra accanto)"),
     (
         r"\b(sconto|sconti|scontato|scontata|scontati|promo|promozione|saldo|saldi|"
         r"listino|listini|price\s?list|tarifa|pricing|"
@@ -204,6 +244,7 @@ def lint_pubblicazione(testo: str, canale: str = "generico") -> LintResult:
     if not testo or not testo.strip():
         return LintResult(ok=False, violazioni=[Violazione(BLOCK, "vuoto", "testo vuoto o assente")])
 
+    testo = _normalizza_testo(testo)
     v: list[Violazione] = []
     v += _find(testo, PREZZO_PATTERNS, BLOCK, "prezzi-e-cifre-commerciali")
     v += _find(testo, PREZZO_NUDO, WARN, "prezzo-nominato")

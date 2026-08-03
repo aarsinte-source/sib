@@ -29,6 +29,12 @@ CASI_BLOCCO = [
     ("claim clinico non documentato", "Clinicamente provato: risultati garantiti in una settimana."),
     ("claim naturale assoluto", "BABILON è composto al 100% naturale, zero eccezioni."),
     ("claim numerico non documentato", "Provato: il 40% delle clienti nota la differenza in 3 giorni."),
+    # --- REGRESSIONE ⑥ (revisione avversariale 2026-08-03) ---
+    ("prezzo in lettere, senza cifra", "Il trattamento costa duecento euro, prenota subito."),
+    ("prezzo in lettere EN", "The treatment costs two hundred dollars."),
+    ("shop con zero-width space dentro la parola", "Vai sul nostro sh​op oggi stesso."),
+    ("carrello con zero-width space dentro la parola", "Aggiungi al car​rello i tuoi preferiti."),
+    ("acquista con non-breaking space dentro la parola", "Acqui\xa0sta ora la nuova gamma."),
 ]
 
 CASI_OK = [
