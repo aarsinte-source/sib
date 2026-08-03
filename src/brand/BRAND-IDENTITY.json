@@ -1,0 +1,158 @@
+{
+  "_meta": {
+    "documento": "Identità di marca SHEis, ricavata per reverse engineering dal profilo reale",
+    "versione": "1.0",
+    "generato": "2026-08-03",
+    "fonte_primaria": "@sheisbeautyhair — 12 post (13 feb → 22 lug 2026) e 12 reel (17 giu 2025 → 10 apr 2026), scaricati via ScrapeCreators il 2026-08-03",
+    "fonte_secondaria": "~/alkemia-sheis-web/src/content/catalog.it.json (sito ufficiale) e .claude/skills/sheis-brand-core/SKILL.md (validata verbatim da Mauro)",
+    "uso": "VINCOLO ESEGUIBILE. Ogni generatore di contenuti DEVE leggere questo file; il linter DEVE farlo rispettare. Non è un documento di riferimento: è una regola.",
+    "regola_di_precedenza": "In caso di conflitto vince sheis-brand-core (validata dal cliente). Questo file aggiunge ciò che è MISURATO sul profilo reale, non ciò che è dichiarato."
+  },
+
+  "profilo": {
+    "handle": "sheisbeautyhair",
+    "nome": "SHEis Beauty Hair",
+    "verificato": true,
+    "follower": 32832,
+    "seguiti": 572,
+    "post_totali": 598,
+    "attivo_dal": 2015,
+    "sito": "http://www.sheishair.com/",
+    "bio_attuale": "✨Bellezza 🌿Salute ⏳Tempo — Una sola filosofia, quattro brand che si prendono cura dei tuoi capelli. Born in 2015",
+    "categoria_ig": "Health/beauty"
+  },
+
+  "diagnosi_misurata": {
+    "cadenza_attuale_giorni": 14.4,
+    "cadenza_giudizio": "Circa 2 post al mese. Troppo rada perché l'algoritmo consideri il profilo attivo.",
+    "engagement_rate_mediano_pct": 0.26,
+    "engagement_benchmark_sano_pct": "1,0–3,0",
+    "engagement_giudizio": "Sotto di circa 4-10 volte il benchmark di categoria. Non è un problema di contenuto: è un problema di frequenza e di formato.",
+    "hashtag_usati": 0,
+    "hashtag_giudizio": "Zero hashtag su 12 post. Per un profilo che vuole essere scoperto da saloni e distributori è la singola occasione persa più grande e più economica da correggere.",
+    "efficacia_per_formato_misurata": {
+      "reel": { "like_mediana": 217, "views_mediana": 2455, "nota": "il formato che vince" },
+      "carosello": { "like_mediana": 87, "nota": "2,2 volte l'immagine singola" },
+      "immagine_singola": { "like_mediana": 39, "nota": "il formato più debole, ed è il più usato (6 su 12)" }
+    },
+    "ordine_di_efficacia": ["reel", "carosello", "immagine_singola"],
+    "contraddizione_da_correggere": "Il formato più debole è quello più pubblicato."
+  },
+
+  "falso_positivo_da_non_imitare": {
+    "contenuto": "Reel BRAND MENTALIST del 2025-12-03",
+    "views": 194389,
+    "like": 107,
+    "commenti": 2,
+    "like_su_views_pct": 0.06,
+    "perche_e_un_falso_positivo": "Ha raggiunto quasi 6 volte il numero di follower ma con un rapporto like/views di 0,06%, contro il 2,3–2,9% dei reel piccoli dello stesso profilo. Reach senza risonanza: il contenuto è arrivato a un pubblico non affine. Va letto come distribuzione anomala, non come modello di contenuto riuscito.",
+    "metrica_da_usare_invece": "like_su_views_pct — è il segnale di affinità del pubblico. Sopra il 2% il contenuto ha trovato le persone giuste; sotto lo 0,5% ha solo fatto numero.",
+    "riferimento_positivo_reale": "Reel Sun Babilon UV del 2026-04-10: 28.730 views con 0,76% like/view e 217 like — il miglior equilibrio fra portata e risonanza del profilo."
+  },
+
+  "brand_e_linee": {
+    "dichiarati_in_bio": 4,
+    "presenti_sul_sito": [
+      { "nome": "SHEis Color", "claim": "La colorazione dermatologica senza ammoniaca.", "prova_ricorrente": "colore in 15 minuti di posa" },
+      { "nome": "BABILON", "claim": "Wash, care, style e rebuilding. 99% di origine naturale." },
+      { "nome": "YOUNIC", "claim": "Sistema brevettato a tre fasi per cute e capelli." },
+      { "nome": "SHEis Blond System", "claim": "Cartine di nuova generazione per meches, balayage e schiaritura." },
+      { "nome": "Sun BABILON", "claim": "Protezione del capello dai raggi solari.", "nota": "linea stagionale dentro BABILON, non un brand a sé" },
+      { "nome": "SHEis Accessories", "claim": "Tecnologia e design per il salone professionale." }
+    ],
+    "avvertenza": "La bio dice «quattro brand», il sito ne espone sei voci. Prima di scrivere contenuti che elencano i brand, la lista va confermata con Mauro.",
+    "stato": "[DA CONFERMARE]"
+  },
+
+  "identita": {
+    "claim_aziendale": "Make your life better.",
+    "valori_sito": ["Salute", "Tempo", "Tecnologia"],
+    "valori_bio": ["Bellezza", "Salute", "Tempo"],
+    "termine_proprietario": {
+      "nome": "BRAND MENTALIST",
+      "significato": "Come SHEis chiama i propri tecnici — «artisti, visionari, creativi, tecnici». Termine di marca vero, usato dall'azienda.",
+      "uso": "Va usato con la grafia esatta in maiuscolo. È un asset narrativo forte e oggi sottoutilizzato."
+    },
+    "leva_narrativa_principale": "L'Accademia e la formazione. È il contenuto che genera più portata e più orgoglio di rete, ed è coerente con la posizione di SHEis nel canale.",
+    "posizione_dichiarata": "Produttore professionale che vende ai saloni attraverso i distributori. Nessuna vendita online: è un elemento distintivo, non un limite."
+  },
+
+  "voce": {
+    "registro": "Luxury sobrio. Sensoriale prima che tecnico, mai gridato, mai da saldo.",
+    "struttura_caption_misurata": [
+      "1. Gancio sensoriale o culturale (un profumo, un luogo, un rito, una stagione)",
+      "2. Il prodotto come conseguenza naturale del gancio",
+      "3. Beneficio tecnico con un numero verificabile (es. «in soli 15 minuti di posa»)",
+      "4. Invito a scoprire, mai a comprare — «Scopri la gamma su www.sheishair.com»"
+    ],
+    "bilinguismo": {
+      "pratica_reale": "Italiano e inglese nello stesso post, separati da una riga con «--»",
+      "regola": "Mantenere. È già il loro standard e serve la rete estera, che è la priorità commerciale dichiarata."
+    },
+    "ancoraggi_culturali_usati": ["Xocoātl, l'antica bevanda azteca", "Capri e l'estate italiana", "il mare", "il rituale di cura"],
+    "emoji_del_brand": ["✨", "💙", "🌊", "🤍", "🤎", "☀"],
+    "emoji_nota": "💙 e 🌊 dominano: il blu è il colore di riconoscimento, coerente con la linea solare."
+  },
+
+  "lessico": {
+    "ammesso_misurato": [
+      "rituale", "gesto", "routine", "cura", "bellezza", "luce", "protezione", "idratazione",
+      "nutrimento", "morbidezza", "performance", "formula", "tecnologia", "professionale",
+      "dermatologicamente testato", "limited edition", "intensità", "controllo", "durata",
+      "riflessi", "colorazione", "salone", "Accademia", "formazione", "BRAND MENTALIST",
+      "consulenza tecnica", "innovazione", "competenza"
+    ],
+    "vietato_assoluto": {
+      "prezzi_e_cifre_commerciali": ["€", "euro", "prezzo", "listino", "sconto", "offerta", "promo", "saldo"],
+      "lessico_da_negozio": ["shop", "negozio", "carrello", "acquista", "compra", "ordina ora", "e-commerce", "checkout", "cart", "tienda", "panier", "Warenkorb", "koszyk", "loja", "متجر"],
+      "firewall": ["Metodo 29", "Metodo29", "Method 29"],
+      "motivo_firewall": "Regola non negoziabile del cliente: nessun collegamento pubblico fra SHEis e questo marchio. Vale in ogni lingua, in ogni parafrasi e anche nei metadati tecnici."
+    },
+    "vietato_di_stile": [
+      "claim numerici non documentati", "superlativi senza prova", "linguaggio consumer da vendita diretta",
+      "promesse mediche o terapeutiche", "nomi di clienti o distributori senza consenso scritto"
+    ]
+  },
+
+  "pubblici": {
+    "distributore_estero": { "priorita": 1, "lingua": ["en", "es"], "nota": "priorità commerciale numero uno dichiarata da Mauro; beachhead Spagna [DA CONFERMARE]" },
+    "distributore_italia": { "priorita": 2, "lingua": ["it"] },
+    "salone": { "priorita": 3, "lingua": ["it"], "vincolo": "Gate zone esclusive: un salone in zona coperta si instrada al distributore di zona, non gli si vende." }
+  },
+
+  "regole_di_generazione": {
+    "mix_formati_obbligatorio": { "reel": 0.5, "carosello": 0.35, "immagine_singola": 0.15 },
+    "mix_motivo": "Ribalta la pratica attuale, che privilegia il formato meno efficace secondo i loro stessi dati.",
+    "cadenza_obiettivo_giorni": 3,
+    "cadenza_motivo": "Da 2 post al mese a circa 10. È la leva più forte e non costa creatività aggiuntiva: il carosello si taglia dal materiale già esistente.",
+    "hashtag_per_post": { "min": 8, "max": 15, "nota": "Oggi zero. Vanno introdotti in italiano e inglese, misti fra generici di categoria e specifici di nicchia professionale." },
+    "cta_ammesse": ["Scopri la gamma su www.sheishair.com", "Trova il tuo salone", "Scrivici per diventare distributore"],
+    "cta_vietate": ["Acquista", "Ordina", "Compra ora", "Aggiungi al carrello"],
+    "numeri_ammessi": "Solo quelli documentati: 15 minuti di posa, 99% di origine naturale, tre fasi YOUNIC, senza ammoniaca. Ogni altro numero va marcato [DA CONFERMARE] e non esce.",
+    "lingue_per_post": ["it", "en"],
+    "lingua_terza": { "valore": "es", "stato": "[DA CONFERMARE]", "nota": "dedotta dallo scoring dei mercati, mai confermata a voce da Mauro" }
+  },
+
+  "palette": {
+    "primario": "#0B2A4A",
+    "primario_nota": "Blu profondo — desunto dalla dominanza di 💙 e 🌊 e dalla linea solare. [DA VERIFICARE sui file vettoriali del marchio, che Mauro non ha ancora fornito]",
+    "accento": "#C9A227",
+    "accento_nota": "Oro sobrio per il registro luxury. [DA VERIFICARE]",
+    "neutri": ["#FFFFFF", "#F4F1EA", "#1A1A1A"],
+    "avvertenza": "La palette è dedotta, non misurata sui vettoriali. Finché non arrivano i file originali del marchio, ogni creatività generata va marcata come approssimazione cromatica."
+  },
+
+  "occasioni_ricorrenti": [
+    { "quando": "primavera-estate", "tema": "Sun BABILON, protezione solare, Capri, viaggio" },
+    { "quando": "settembre-ottobre", "tema": "ripresa formazione in Accademia, BRAND MENTALIST" },
+    { "quando": "continuo", "tema": "SHEis Color e la prova dei 15 minuti" },
+    { "quando": "fiere", "tema": "Cosmoprof e appuntamenti internazionali" }
+  ],
+
+  "occasioni_mancanti_da_costruire": [
+    "Contenuti rivolti ai DISTRIBUTORI: oggi il profilo parla quasi solo al consumatore finale, mentre il cliente vero è il distributore.",
+    "Il caso del distributore di Pisa — otto clienti nuovi in cinque mesi — è la prova sociale più forte che SHEis abbia e non è mai stata raccontata. Serve il permesso del diretto interessato.",
+    "Il dietro le quinte dell'Accademia in formato reel breve e ricorrente, non solo come resoconto dopo l'evento.",
+    "La voce dei BRAND MENTALIST come serie: sono già un asset di marca, oggi citati una volta sola."
+  ]
+}

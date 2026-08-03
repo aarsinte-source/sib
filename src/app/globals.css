@@ -1,0 +1,100 @@
+@import "tailwindcss";
+
+/* ============================================================================
+   SHEis STUDIO — design system
+   ----------------------------------------------------------------------------
+   Stesso registro cromatico del sito/console SHEis (inchiostro quasi nero,
+   osso caldo, oro desaturato), ma qui è uno strumento operativo, non una
+   vetrina: meno cerimonia, più densità informativa, azioni sempre a portata
+   di mano. Interfaccia in italiano, sobria e leggibile — chi la usa non è un
+   tecnico (SPEC.md).
+   ========================================================================== */
+
+@theme {
+  --color-ink: #0a0a0b;
+  --color-ink-2: #121215;
+  --color-bone: #faf8f5;
+  --color-bone-2: #f3eee7;
+  --color-bone-3: #e9e2d8;
+  --color-clay: #6b6560;
+  --color-clay-2: #8c857d;
+  --color-gold: #b79a6b;
+  --color-gold-deep: #7a6236;
+
+  --color-live: #3f6b4a;
+  --color-ready: #2f5d7c;
+  --color-wip: #8a6a20;
+  --color-blocked: #a3372c;
+
+  --font-display: ui-serif, Georgia, "Times New Roman", serif;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+:root {
+  --surface: var(--color-bone);
+  --surface-2: var(--color-bone-2);
+  --on-surface: var(--color-ink);
+  --on-surface-2: var(--color-clay);
+  --on-surface-3: var(--color-clay-2);
+  --hairline: color-mix(in oklab, var(--color-ink) 12%, transparent);
+  --hairline-strong: color-mix(in oklab, var(--color-ink) 24%, transparent);
+  --accent-ink: var(--color-gold-deep);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --surface: var(--color-ink);
+    --surface-2: var(--color-ink-2);
+    --on-surface: var(--color-bone);
+    --on-surface-2: #a8a29a;
+    --on-surface-3: #7d7871;
+    --hairline: color-mix(in oklab, var(--color-bone) 14%, transparent);
+    --hairline-strong: color-mix(in oklab, var(--color-bone) 26%, transparent);
+    --accent-ink: var(--color-gold);
+  }
+}
+
+* {
+  border-color: var(--hairline);
+}
+
+body {
+  background: var(--surface);
+  color: var(--on-surface);
+  font-family: var(--font-sans);
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--color-gold);
+  color: var(--color-ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent-ink);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.display {
+  font-family: var(--font-display);
+  font-weight: 400;
+}
+
+input,
+textarea,
+select {
+  background: var(--surface);
+  color: var(--on-surface);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-bone-3);
+  border-radius: 99px;
+}
