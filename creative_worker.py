@@ -60,16 +60,27 @@ def prompt_variante(contenuto: dict, variante: dict) -> str:
     ).strip()
 
 
-def varianti_esistenti(db: supabase.SupabaseClient, contenuto_id: str) -> set[int]:
+def varianti_esistenti(db: supabase.SupabaseClient, contenuto_id: str) -> tuple[bool, set[int]]:
+    """(letto_ok, indici_esistenti). Se la lettura fallisce, `letto_ok=False`
+    e l'insieme è vuoto ma NON VA LETTO come "non esistono varianti" — è
+    "non lo so". Confondere i due casi era il difetto ③ (revisione
+    avversariale 2026-08-03): un errore di rete/DB veniva interpretato come
+    "0 varianti", il worker le rigenerava da capo e, in modalità reale, le
+    ripagava.
+    """
     esito = db.select("sheis_varianti", query=f"select=indice,stato&contenuto_id=eq.{contenuto_id}")
     if not esito.ok:
-        return set()
-    return {r["indice"] for r in esito.dati if r.get("stato") in ("pronta", "approvata", "in_corso")}
+        return False, set()
+    return True, {r["indice"] for r in esito.dati if r.get("stato") in ("pronta", "approvata", "in_corso")}
 
 
 def genera_per_contenuto(db: supabase.SupabaseClient, contenuto: dict, tetto_raggiunto: list[bool]) -> str:
     cid = contenuto["id"]
-    gia_fatte = varianti_esistenti(db, cid)
+    letto_ok, gia_fatte = varianti_esistenti(db, cid)
+    if not letto_ok:
+        print(f"  ⚠️  {cid[:8]}… — impossibile leggere le varianti esistenti dal DB: "
+              f"salto per sicurezza, NON genero alla cieca (rischio di ripagare varianti già fatte)")
+        return "errore_lettura_db"
     if len(gia_fatte) >= 3:
         print(f"  ⏭️  {cid[:8]}… — già ha {len(gia_fatte)} varianti, salto (idempotenza)")
         return "idempotente"
@@ -80,13 +91,15 @@ def genera_per_contenuto(db: supabase.SupabaseClient, contenuto: dict, tetto_rag
             continue
         if tetto_raggiunto[0]:
             print(f"  🛑 {cid[:8]}…/variante {i} — NON generata: tetto giornaliero già raggiunto in questo run")
-            db.upsert("sheis_varianti", {
+            esito_scrittura = db.upsert("sheis_varianti", {
                 "contenuto_id": cid, "indice": i,
                 "prompt": prompt_variante(contenuto, variante),
                 "angolo_visivo": variante["angolo_visivo"],
                 "stato": "errore",
                 "errore": "tetto giornaliero Higgsfield raggiunto in questo run — variante non tentata, riprovare domani",
             }, conflitto="contenuto_id,indice")
+            if not esito_scrittura.ok:
+                print(f"    🔴 anche la SCRITTURA dello stato 'errore' è fallita nel DB: {esito_scrittura.errore}")
             esito_finale = "bloccato_tetto"
             continue
 
@@ -103,15 +116,29 @@ def genera_per_contenuto(db: supabase.SupabaseClient, contenuto: dict, tetto_rag
             "costo_eur": risultato.costo_eur, "stato": risultato.stato,
             "errore": risultato.errore, "asset_url": risultato.asset_url,
         }
-        db.upsert("sheis_varianti", riga, conflitto="contenuto_id,indice")
+        esito_scrittura = db.upsert("sheis_varianti", riga, conflitto="contenuto_id,indice")
 
-        if risultato.tetto_raggiunto:
+        # ⚠️ REGRESSIONE ③ (revisione avversariale 2026-08-03): il ritorno di
+        # db.upsert() non veniva mai controllato. Con una scrittura fallita,
+        # il worker stampava comunque "✓ pronta" per una generazione che, in
+        # modalità reale, era stata PAGATA ma non REGISTRATA — al giro dopo
+        # varianti_esistenti() non la trova e la worker la rigenera (la
+        # ripaga). Ora la scrittura fallita è un caso a sé, sempre segnalato,
+        # mai confuso con un successo.
+        if not esito_scrittura.ok:
+            print(f"    🔴 SCRITTURA FALLITA nel DB: {esito_scrittura.errore}")
+            if LIVE and risultato.ok:
+                print(f"    🔴🔴 ATTENZIONE: generazione REALE avvenuta (costo €{risultato.costo_eur:.3f}) "
+                      f"ma NON registrata — rischio di essere rigenerata e ripagata al prossimo run. "
+                      f"Verificare manualmente asset_url: {risultato.asset_url}")
+            esito_finale = "scrittura_fallita"
+        elif risultato.tetto_raggiunto:
             print(f"    🛑 TETTO GIORNALIERO: {risultato.errore}")
             tetto_raggiunto[0] = True
             esito_finale = "bloccato_tetto"
         elif risultato.ok:
             print(f"    ✓ {risultato.stato} — costo €{risultato.costo_eur:.3f}"
-                  + (f" (SIMULATO)" if not LIVE else ""))
+                  + (" (SIMULATO)" if not LIVE else "") + " — registrato nel DB")
         else:
             print(f"    ✗ errore: {risultato.errore}")
             esito_finale = "errore"
