@@ -1,0 +1,7 @@
+{
+  "_nota": "MAPPA ZONE ESCLUSIVE — 🔴 INPUT MANCANTE, DA FORNIRE DA MAURO.",
+  "_effetto": "Finché 'zones' è vuoto, map_available=false e OGNI lead-salone finisce in escalation umana. È voluto: il sistema non indovina.",
+  "_formato": {"provincia o cap in minuscolo": "Nome Distributore di zona", "esempio_te": "Distributore Abruzzo Srl", "esempio_zona_libera": "scoperta"},
+  "map_available": false,
+  "zones": {}
+}
