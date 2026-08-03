@@ -171,7 +171,11 @@ export type Candidato = {
   follower: number | null;
   citta: string | null;
   zona: string | null;
-  tipo: "salone" | "distributore" | "non_pertinente" | "incerto" | null;
+  // ⚠️ Col TRATTINO, non col trattino basso. Il vincolo del database lo impone
+  // e il vocabolario canonico lo dichiara (§classificazione_candidato). Qui era
+  // scritto «non_pertinente» e nella discovery pure: il database rifiutava in
+  // blocco 112 candidati reali. Terza volta che la stessa convenzione diverge.
+  tipo: "salone" | "distributore" | "non-pertinente" | "incerto" | null;
   tipo_motivo: string | null;
   score: number | null;
   hook: string | null;
@@ -511,8 +515,31 @@ export async function segnaUltimoAccesso(id: string): Promise<void> {
 
 /* --------------------------------------------------------- vetrine lettura */
 
-export async function listaCandidati(limite = 50): Promise<Candidato[]> {
-  return sbFetch<Candidato[]>("sheis_candidati", { query: `select=*&order=created_at.desc&limit=${limite}` });
+/**
+ * ⚠️ Il limite c'è, ma non deve essere invisibile.
+ *
+ * Prima questa funzione tagliava a 50 in silenzio: con 112 candidati in
+ * archivio, la pagina ne mostrava 50 e sembrava che fossero tutti. Un taglio
+ * che non si dichiara non è un limite, è un'informazione sbagliata — e il
+ * candidato più interessante può benissimo essere il 51°.
+ *
+ * L'ordine è per PUNTEGGIO, non per data di scoperta: chi apre la pagina vuole
+ * i profili migliori in cima, non gli ultimi arrivati.
+ */
+export async function listaCandidati(limite = 200): Promise<Candidato[]> {
+  return sbFetch<Candidato[]>("sheis_candidati", {
+    query: `select=*&order=score.desc.nullslast,created_at.desc&limit=${limite}`,
+  });
+}
+
+/** Quanti ce ne sono davvero, per tipo. Serve a dichiarare cosa NON si sta vedendo. */
+export async function contaCandidatiPerTipo(): Promise<Record<string, number>> {
+  const righe = await sbFetch<{ tipo: string | null }[]>("sheis_candidati", { query: "select=tipo" });
+  return righe.reduce<Record<string, number>>((acc, r) => {
+    const k = r.tipo ?? "incerto";
+    acc[k] = (acc[k] ?? 0) + 1;
+    return acc;
+  }, {});
 }
 
 export async function listaCampagne(): Promise<Campagna[]> {
