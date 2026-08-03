@@ -168,6 +168,14 @@ def sezione_outreach(periodo_da: date, periodo_a: date) -> dict:
     except sqlite3.OperationalError as e:
         return {"disponibile": False, "motivo": f"impossibile aprire outreach.db in sola lettura: {e}"}
 
+    # ⚠️ REGRESSIONE (revisione avversariale 2026-08-03): questo blocco era un
+    # try/finally SENZA except. Con uno outreach.db che ha 'prospects' ma non
+    # ancora 'sends' (schema incompleto, scenario plausibile dato lo stato del
+    # progetto), sqlite3.OperationalError risaliva fuori da questa funzione,
+    # fuori da main() — non catturata da nessuno — e faceva morire l'INTERO
+    # report: organico e pubblicitario già calcolati venivano persi, zero
+    # email, zero Telegram quel lunedì. Contraddice il principio dichiarato
+    # nel docstring del file ("un canale che cade non fa cadere l'altro").
     try:
         tocchi_periodo = con.execute(
             "SELECT COUNT(*) FROM sends WHERE sent_date BETWEEN ? AND ?",
@@ -184,6 +192,8 @@ def sezione_outreach(periodo_da: date, periodo_a: date) -> dict:
             for r in con.execute("SELECT state, COUNT(*) AS n FROM channel_state GROUP BY state")
         }
         totale_prospect = con.execute("SELECT COUNT(*) FROM prospects").fetchone()[0]
+    except sqlite3.OperationalError as e:
+        return {"disponibile": False, "motivo": f"schema outreach.db incompleto o inatteso: {e}"}
     finally:
         con.close()
 
@@ -271,15 +281,41 @@ def render_telegram(periodo_da: date, periodo_a: date, organico: dict, pubbl: di
     return "\n".join(righe)
 
 
+def _sicuro(nome: str, fn, *args) -> dict:
+    """Esegue una sezione isolandola dalle altre due: un'eccezione qui — anche
+    una non prevista dal codice della sezione stessa — non deve mai far
+    perdere il lavoro già fatto sulle altre. `except Exception` è voluto: è
+    l'ultimo argine prima del report intero, non un dettaglio interno.
+    Il dict di fallback contiene l'UNIONE delle chiavi lette da tutte e tre
+    le sezioni nei render, cosi qualunque sezione fallisca il render non va
+    mai in KeyError.
+    """
+    try:
+        return fn(*args)
+    except Exception as e:  # noqa: BLE001 — argine finale, deliberatamente ampio
+        print(f"⚠️  sezione '{nome}' ha sollevato un'eccezione imprevista: {type(e).__name__}: {e}")
+        return {
+            "disponibile": False, "motivo": f"errore imprevisto nella sezione '{nome}': {type(e).__name__}: {e}",
+            "attivo": False, "n": 0, "pubblicati": [], "campagne": [],
+            "affinita": {"fonte": "nessuna", "disponibile": False, "motivo": f"sezione '{nome}' fallita",
+                         "mediana_pct": None, "n_reel": 0, "migliore": None, "peggiore": None, "rilevato_il": ""},
+        }
+
+
 def main() -> int:
     print(f"=== report_settimanale.py — {'LIVE' if LIVE else 'SIMULAZIONE (default)'} ===")
     periodo_da, periodo_a = periodo_settimana_scorsa()
     print(f"periodo: {periodo_da} → {periodo_a}")
 
     db = supabase.SupabaseClient()
-    organico = sezione_organico(db, periodo_da, periodo_a)
-    pubblicitario = sezione_pubblicitario(db, periodo_da, periodo_a)
-    outreach = sezione_outreach(periodo_da, periodo_a)
+    # Guscio difensivo per ognuna delle tre sezioni: un'eccezione IMPREVISTA
+    # (non solo lo sqlite3.OperationalError già gestito dentro sezione_outreach)
+    # non deve MAI far perdere le altre due sezioni già calcolate — è il
+    # principio dichiarato in cima a questo file, applicato anche qui, non
+    # solo dentro le singole funzioni (revisione avversariale 2026-08-03).
+    organico = _sicuro("organico", sezione_organico, db, periodo_da, periodo_a)
+    pubblicitario = _sicuro("pubblicitario", sezione_pubblicitario, db, periodo_da, periodo_a)
+    outreach = _sicuro("outreach", sezione_outreach, periodo_da, periodo_a)
 
     corpo_email = render_markdown(periodo_da, periodo_a, organico, pubblicitario, outreach)
     corpo_telegram = render_telegram(periodo_da, periodo_a, organico, pubblicitario, outreach)
