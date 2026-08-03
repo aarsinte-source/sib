@@ -7,7 +7,7 @@ Un BLOCK non è un warning: è uno stop.
 import re
 from dataclasses import dataclass, field
 
-from .vincoli_brand import (PATTERN_NEGOZIO, negozio_eccezione, numero_documentato,
+from .vincoli_brand import (QUANTITA_GENERICA, PATTERN_NEGOZIO, negozio_eccezione, numero_documentato,
                             nega_il_canale, viola_firewall, CLAIM_VIETATI,
                             FIREWALL_PATTERN, PREZZO)
 
@@ -110,17 +110,21 @@ PRICE_PATTERNS += [
 # da 47 anni» passava da questo cancello e veniva fermato dall'altro.
 # La whitelist è la stessa per entrambi (NUMERI_DOCUMENTATI, dalla fonte).
 CLAIM_QUANTIFICATO = [
-    (r"\b\d+\s*(minuti|minuto|ore|ora|minutes|minutos)\b",
-     "durata quantificata non documentata"),
-    (r"\b\d+\s*(giorni|giorno|mesi|mese|anni|anno|days|years|años)\b",
-     "quantità temporale non documentata (anzianità, garanzia, tempi di consegna)"),
-    (r"\b\d+\s*(client[ie]|salon[ie]|distributor[ie]|paesi|countries)\b",
-     "quantità commerciale non documentata"),
-    # ⚠️ Buco misurato il 3/8: «120 nuance» passava da tutti e quattro i filtri.
-    # La cartella SHEis Color ne ha 83 — è l'unico dato di prodotto che chiunque
-    # verifica in due secondi. Non era una divergenza: era un buco condiviso.
-    (r"\b\d+\s*(nuance|nuances|tonalit\w*|tonos|matices|shades)\b",
-     "ampiezza di gamma non documentata (la cartella SHEis Color ha 83 nuance)"),
+    # ⚠️ RESTA SOLO LA PERCENTUALE NUDA. Tutte le altre voci — durate, quantità
+    # temporali, ampiezza di gamma, numero di clienti — erano un ELENCO DI UNITÀ,
+    # e un elenco di unità è per costruzione incompleto: «28 lavaggi» è passato
+    # da tutti e quattro i filtri il 2026-08-04 perché «lavaggi» non c'era.
+    # Ora quel lavoro lo fa QUANTITA_GENERICA, che rovescia la regola: qualunque
+    # cifra attaccata a una parola è un claim salvo prova contraria.
+    #
+    # La percentuale sopravvive perché è l'unico caso che la regola rovesciata
+    # NON copre: «crescita del 92%.» finisce con un punto, non ha una parola
+    # dopo, e sfuggirebbe. In questo settore una percentuale è sempre un claim.
+    #
+    # E l'elenco vecchio non era solo incompleto: era anche SBAGLIATO. Bloccava
+    # «ne parliamo in 20 minuti di call» — la durata di un appuntamento, non un
+    # dato di prodotto. Un filtro che blocca il corretto insegna a ignorarlo.
+    (r"\b\d{1,3}\s?%", "percentuale non nell'elenco documentato"),
 ]
 # Menzione nuda del prezzo senza cifra: legittima quando RINVIA (copione §5),
 # sospetta altrove → passa, ma segnalata per revisione umana.
@@ -312,4 +316,42 @@ def lint(text: str, channel: str = "linkedin", touch: str = "touch2") -> LintRes
     if not text.strip():
         v.append(Violation(BLOCK, "vuoto", "messaggio vuoto"))
 
-    return LintResult(ok=not any(x.level == BLOCK for x in v), violations=v)
+    return LintResult(ok=not any(x.level == BLOCK for x in v), violations=v)# ── quantità generiche: la regola ROVESCIATA ─────────────────────────────────
+# ⚠️ Prima qui c'era un ELENCO di unità sospette (minuti, ore, nuance, saloni…).
+# Il 2026-08-04 il piano editoriale ha prodotto «28 lavaggi» — un dato di
+# prodotto inventato — ed è passato da tutti e quattro i filtri, perché
+# «lavaggi» non era nell'elenco. Un elenco di unità è per costruzione
+# incompleto: ogni unità nuova è un claim che passa, e lo si scopre dopo la
+# pubblicazione.
+#
+# La regola si rovescia: QUALUNQUE cifra attaccata a una parola è un claim,
+# salvo i numeri documentati (col loro contesto) e salvo le eccezioni
+# dichiarate nella fonte — anni, orari, recapiti, e il contesto d'incontro
+# («ne parliamo in venti minuti» è la durata di una call, non un dato di
+# prodotto: falso positivo già pagato una volta).
+_QG = QUANTITA_GENERICA if isinstance(QUANTITA_GENERICA, dict) else {}
+_QG_RE = re.compile(_QG["pattern"], re.IGNORECASE) if _QG.get("pattern") else None
+_QG_ECCEZIONI = [re.compile(e["pattern"], re.IGNORECASE)
+                 for e in _QG.get("eccezioni_contesto", []) if e.get("pattern")]
+
+
+def _frase_attorno(testo: str, span: tuple[int, int]) -> str:
+    """La frase che contiene la cifra. Le eccezioni valgono nella FRASE, non nel
+    testo intero: altrimenti una call nominata all'inizio di una didascalia
+    lunga sdoganerebbe qualunque numero fino in fondo."""
+    inizio = max(testo.rfind(".", 0, span[0]), testo.rfind("\n", 0, span[0]),
+                 testo.rfind("!", 0, span[0]), testo.rfind("?", 0, span[0])) + 1
+    fine = min([x for x in (testo.find(".", span[1]), testo.find("\n", span[1]),
+                            testo.find("!", span[1]), testo.find("?", span[1]))
+                if x >= 0] + [len(testo)])
+    return testo[inizio:fine]
+
+
+def _quantita_ammessa(testo: str, span: tuple[int, int]) -> bool:
+    if numero_documentato(testo, span[0], span[1]):
+        return True
+    frase = _frase_attorno(testo, span)
+    return any(r.search(frase) for r in _QG_ECCEZIONI)
+
+
+
