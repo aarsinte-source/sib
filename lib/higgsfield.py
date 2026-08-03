@@ -94,8 +94,15 @@ def genera_variante(prompt: str, modello: str = "gpt_image_2", crediti_stimati: 
                 errore="[SIMULATO] tetto giornaliero Higgsfield raggiunto — oggi non si genera più, riprovare domani",
                 costo_crediti=crediti_stimati, costo_eur=costo_eur,
             )
+        # ⚠️ REGRESSIONE ⑤ (revisione avversariale 2026-08-03): qui c'era
+        # `ok=True` fisso, anche quando `ok_gate=False`. Il chiamante decide
+        # sempre su `.ok`, quindi un gate FALLITO veniva riportato con la
+        # spunta verde della riuscita ("✓ errore — costo...") e contato come
+        # "generato" nel riepilogo, mentre nel DB lo stato era 'errore'. Il
+        # ramo LIVE poco sotto (righe 107-109) lo faceva già giusto — qui si
+        # allinea la simulazione, che è la modalità SEMPRE usata in sessione.
         return EsitoGenerazione(
-            ok=True, stato="pronta" if ok_gate else "errore",
+            ok=ok_gate, stato="pronta" if ok_gate else "errore",
             asset_url="" if not ok_gate else "SIMULATO://nessun-asset-generato",
             provider=f"higgsfield:{modello}",
             costo_crediti=crediti_stimati, costo_eur=costo_eur,

@@ -27,11 +27,22 @@ print(f"100 crediti (~€{higgsfield.stima_costo(100):.3f}): ok={ok} — {msg}")
 if ok:
     print("✗ atteso ok=False sopra soglia default"); problemi += 1
 
-print("\n=== generazione in simulazione (mai rete, mai LIVE) ===")
+print("\n=== generazione in simulazione, SOTTO soglia (mai rete, mai LIVE) ===")
 esito = higgsfield.genera_variante("prompt di prova", crediti_stimati=12, live=False)
 print(f"stato={esito.stato} ok={esito.ok} costo=€{esito.costo_eur:.3f} errore={esito.errore!r}")
 if esito.stato != "pronta" or not esito.ok:
     print("✗ atteso stato=pronta in simulazione sotto soglia"); problemi += 1
+
+print("\n=== REGRESSIONE ⑤: generazione in simulazione, SOPRA soglia ===")
+# Difetto segnalato dal collegio di revisione (2026-08-03): qui `ok` era
+# fisso a True anche col gate fallito — il chiamante decide su `.ok`, quindi
+# un errore veniva riportato come un successo (segno di spunta verde
+# accanto alla parola "errore"). Il test precedente copriva solo SOTTO
+# soglia, mai sopra: per questo il difetto non era stato visto prima.
+esito = higgsfield.genera_variante("prompt di prova", crediti_stimati=100, live=False)  # 100cr ≈ €3,30 > soglia €2,00
+print(f"stato={esito.stato} ok={esito.ok} costo=€{esito.costo_eur:.3f} errore={esito.errore!r}")
+if esito.stato != "errore" or esito.ok:
+    print("✗ atteso stato=errore E ok=False sopra soglia — un gate fallito non può risultare ok=True"); problemi += 1
 
 print("\n=== gestione tetto giornaliero (knob SHEIS_SIMULA_TETTO=1) ===")
 os.environ["SHEIS_SIMULA_TETTO"] = "1"
