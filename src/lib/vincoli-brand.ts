@@ -1,7 +1,7 @@
 /**
  * GENERATO da sincronizza_brand.py — NON modificare a mano.
  * 
- * Le liste qui sotto vengono da BRAND-IDENTITY_sheis_2026-08-03.json (impronta 5fc2c9f5ed4fb43e).
+ * Le liste qui sotto vengono da BRAND-IDENTITY_sheis_2026-08-03.json (impronta 97d075c475d5eba4).
  * Modificarle qui significa reintrodurre esattamente il difetto per cui
  * questo file esiste: quattro linter con quattro copie divergenti delle
  * stesse regole, e verdetti opposti sullo stesso testo.
@@ -10,7 +10,7 @@
  *     python3 ~/alkemia-sheis-backend/sincronizza_brand.py --allinea
  * 
  */
-export const IMPRONTA_FONTE = "5fc2c9f5ed4fb43e";
+export const IMPRONTA_FONTE = "97d075c475d5eba4";
 
 export type NumeroDocumentato = {
   valore: string;
@@ -86,6 +86,46 @@ export const PREZZO = [
   "promo",
   "saldo"
 ];
+
+// ⚠️ Regola sui numeri INVERTITA: qualunque cifra attaccata a una parola
+// è un claim, salvo i documentati e le eccezioni. Prima era un elenco di
+// unità sospette, e «28 lavaggi» passava da tutti e quattro i filtri.
+export const QUANTITA_GENERICA = {
+  "_perche": "⚠️ BUCO MISURATO il 2026-08-04. Il piano editoriale generato conteneva «28 lavaggi»: un dato di prodotto inventato, passato da TUTTI e quattro i filtri. La regola sui numeri era scritta come ELENCO di unità sospette (minuti, ore, giorni, nuance, saloni…) e «lavaggi» non c'era. Un elenco di unità è per costruzione incompleto: ogni unità nuova è un claim che passa, e ce ne si accorge dopo la pubblicazione. La regola si INVERTE: qualunque numero attaccato a una parola è un claim, salvo quelli documentati e salvo le eccezioni qui sotto. È lo stesso rovesciamento che ha reso robusta la regola sul lessico da negozio.",
+  "pattern": "\\b\\d{1,4}(?:[.,]\\d{1,2})?\\s*%?\\s+[A-Za-zÀ-ÿ]{3,}",
+  "cosa": "quantità non documentata: ogni numero riferito al prodotto deve stare nell'elenco documentato",
+  "eccezioni_contesto": [
+    {
+      "pattern": "\\b(19|20)\\d{2}\\b",
+      "perche": "un anno non è un claim di prodotto"
+    },
+    {
+      "pattern": "\\b\\d{1,2}[:.]\\d{2}\\b",
+      "perche": "un orario non è un claim"
+    },
+    {
+      "pattern": "\\b24\\s*/\\s*7\\b",
+      "perche": "modo di dire sulla disponibilità, non un dato"
+    },
+    {
+      "pattern": "#\\w*\\d",
+      "perche": "numeri dentro un hashtag"
+    },
+    {
+      "pattern": "https?://\\S*\\d",
+      "perche": "numeri dentro un indirizzo"
+    },
+    {
+      "pattern": "\\b(call|chiamat\\w+|videochiamat\\w+|appuntament\\w+|riunion\\w+|incontr\\w+|demo|webinar|consulenz\\w+|meeting)\\b",
+      "perche": "⚠️ falso positivo già pagato: «ne parliamo in venti minuti» è la durata di una call, non un dato di prodotto. Se nella frase c'è un contesto d'incontro, il numero non è un claim."
+    },
+    {
+      "pattern": "\\b(via|viale|piazza|numero civico|cap|p\\.?\\s?iva|telefono|tel\\.)\\b",
+      "perche": "recapiti e indirizzi"
+    }
+  ],
+  "regola": "Un numero seguito da una parola BLOCCA, a meno che: (a) corrisponda a un numero documentato col suo contesto richiesto, oppure (b) nella stessa frase compaia una delle eccezioni. Chi vuole usare un dato nuovo lo fa documentare, non lo scrive e basta."
+};
 
 export const FIREWALL = [
   "Metodo 29",

@@ -49,6 +49,17 @@ export type Contenuto = {
   ora_pubblicazione: string | null;
   stato: StatoContenuto;
   feedback_mauro: string | null;
+  /* ── aggiunte dalla migrazione 0008 ────────────────────────────────────── */
+  /** Il pilastro di contenuto a cui questo giorno appartiene. */
+  pillar_id: string | null;
+  /** L'analisi di mercato da cui è nato: rende il contenuto difendibile. */
+  ricerca_id: string | null;
+  /** Il PARLATO del video: battute, non didascalia. Null sui formati non video. */
+  copy_ugc: string | null;
+  /** Le parole stampate SULL'immagine: {titolo, sottotitolo, cta}. Poche, o non si leggono. */
+  copy_grafica: { titolo?: string; sottotitolo?: string; cta?: string } | null;
+  /** 1..30 nel piano a trenta giorni. */
+  giorno: number | null;
   creato_da: string | null;
   created_at: string;
   updated_at: string;
@@ -221,10 +232,22 @@ export async function creaPiano(titolo: string, giorni = 21): Promise<Piano> {
   return riga;
 }
 
+/**
+ * Quello che serve per creare un contenuto.
+ *
+ * I campi introdotti dalla migrazione 0008 (pilastro, ricerca, testi UGC e
+ * grafici, giorno) sono OPZIONALI: l'impalcatura del piano li riempie, ma un
+ * contenuto creato a mano o da un flusso più vecchio deve poter nascere senza.
+ * Renderli obbligatori avrebbe rotto ogni chiamante esistente per un campo che
+ * il database accetta nullo.
+ */
 export type NuovoContenuto = Omit<
   Contenuto,
-  "id" | "created_at" | "updated_at" | "asset_path" | "prompt_creativo" | "nota_interna" | "variante_scelta_id" | "ora_pubblicazione" | "feedback_mauro"
->;
+  | "id" | "created_at" | "updated_at" | "asset_path" | "prompt_creativo"
+  | "nota_interna" | "variante_scelta_id" | "ora_pubblicazione" | "feedback_mauro"
+  | "pillar_id" | "ricerca_id" | "copy_ugc" | "copy_grafica" | "giorno"
+> &
+  Partial<Pick<Contenuto, "pillar_id" | "ricerca_id" | "copy_ugc" | "copy_grafica" | "giorno">>;
 
 export async function creaContenuti(righe: NuovoContenuto[]): Promise<Contenuto[]> {
   if (righe.length === 0) return [];
@@ -662,4 +685,57 @@ export async function archiviaArticolo(id: string): Promise<Articolo> {
 
 export async function listaReport(): Promise<Report[]> {
   return sbFetch<Report[]>("sheis_report", { query: "select=*&order=periodo_da.desc" });
+}
+
+/* ------------------------------------------------- piano a trenta giorni */
+
+/** I contenuti di UN piano, in ordine di giorno. */
+export async function contenutiDelPiano(pianoId: string): Promise<Contenuto[]> {
+  return sbFetch<Contenuto[]>("sheis_contenuti", {
+    query: `select=*&piano_id=eq.${pianoId}&order=giorno.asc,data_pubblicazione.asc`,
+  });
+}
+
+/** Il piano più recente. È quello su cui si sta lavorando, salvo scelta esplicita. */
+export async function pianoCorrente(): Promise<Piano | null> {
+  const righe = await sbFetch<Piano[]>("sheis_piani", {
+    query: "select=*&order=created_at.desc&limit=1",
+  });
+  return righe[0] ?? null;
+}
+
+/**
+ * Aggiorna i campi di un contenuto. Usato dalla scrittura dei testi.
+ *
+ * ⚠️ NON tocca `stato`: cambiare i testi di un contenuto già approvato NON lo
+ * disapprova da solo, e non deve — chi approva deve poterlo rivedere. Chi vuole
+ * riaprire un contenuto usa `riapriContenuto`, che lo scrive nel registro.
+ */
+export async function aggiornaContenuto(
+  id: string,
+  patch: Partial<
+    Pick<
+      Contenuto,
+      | "copy"
+      | "copy_secondario"
+      | "cta"
+      | "hashtag"
+      | "copy_ugc"
+      | "copy_grafica"
+      | "angolo"
+      | "hook"
+      | "prompt_creativo"
+      | "nota_interna"
+      | "data_pubblicazione"
+      | "ora_pubblicazione"
+    >
+  >,
+): Promise<Contenuto> {
+  const [riga] = await sbFetch<Contenuto[]>("sheis_contenuti", {
+    method: "PATCH",
+    query: `id=eq.${id}`,
+    prefer: "return=representation",
+    body: patch,
+  });
+  return riga;
 }

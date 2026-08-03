@@ -22,6 +22,7 @@ const CATENA = [
 ] as const;
 
 const PRESIDI = [
+  { href: "/coach", label: "Coach" },
   { href: "/outreach", label: "Outreach" },
   { href: "/campagne", label: "Campagne" },
   { href: "/sito", label: "Sito" },

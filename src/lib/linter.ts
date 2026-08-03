@@ -1,5 +1,6 @@
 import { BRAND, GUARDRAILS } from "@/lib/brand";
 import {
+  QUANTITA_GENERICA,
   FORME_FLESSE,
   NEGAZIONI_AMMESSE,
   CLAIM_VIETATI,
@@ -172,12 +173,42 @@ function checkNumeriNonDocumentati(testo: string): ViolazioneLinter[] {
   // che è il modo in cui chiunque lo scrive davvero. Il caso reale sfuggiva, quello
   // da manuale veniva bloccato. Ora "%" sta in un ramo senza `\b`, e le parole
   // conservano il loro confine.
-  const pattern = /\b(\d+(?:[.,]\d+)?)\s*(?:(%|percento|per\s*cento)|(minuti|minuto|fasi|fase|clienti|cliente|follower|anni|anno|ore|ora|giorni|giorno|nuance|tonalità)\b)/giu;
+  // ⚠️ REGOLA ROVESCIATA — 2026-08-04.
+  // Prima l'unità doveva stare in un ELENCO: minuti, fasi, clienti, follower,
+  // anni, ore, giorni, nuance, tonalità. Il piano editoriale ha prodotto
+  // «28 lavaggi» — un dato di prodotto inventato — ed è passato da TUTTI e
+  // quattro i filtri, perché «lavaggi» non era nell'elenco. Un elenco di unità
+  // è per costruzione incompleto: ogni unità nuova è un claim che passa, e ce
+  // ne si accorge solo dopo la pubblicazione.
+  //
+  // Ora vale il contrario: QUALUNQUE cifra attaccata a una parola è un claim,
+  // salvo i numeri documentati col loro contesto e salvo le eccezioni
+  // dichiarate nella fonte (anni, orari, recapiti, contesto d'incontro).
+  // La percentuale resta a parte perché può chiudere la frase — «crescita del
+  // 92%.» non ha una parola dopo e sfuggirebbe alla regola generale.
+  const pattern = new RegExp(
+    `(?:\\b(\\d+(?:[.,]\\d+)?)\\s*(%|percento|per\\s*cento))|(?:${QUANTITA_GENERICA.pattern ?? "\\b(\\d{1,4})\\s+[A-Za-zÀ-ÿ]{3,}"})`,
+    "giu",
+  );
+  const eccezioni = (QUANTITA_GENERICA.eccezioni_contesto ?? []).map(
+    (e: { pattern: string }) => new RegExp(e.pattern, "iu"),
+  );
+  /** La frase attorno alla cifra: le eccezioni valgono nella frase, non nel testo intero. */
+  const fraseAttorno = (s: string, i: number, len: number) => {
+    const inizio = Math.max(0, ...[".", "\n", "!", "?"].map((c) => s.lastIndexOf(c, i) + 1));
+    const fini = [".", "\n", "!", "?"].map((c) => s.indexOf(c, i + len)).filter((x) => x >= 0);
+    return s.slice(inizio, fini.length ? Math.min(...fini) : s.length);
+  };
   const trovate: ViolazioneLinter[] = [];
   let m: RegExpExecArray | null;
   while ((m = pattern.exec(testo)) !== null) {
     if (numeroDocumentato(testo, m.index, m.index + m[0].length)) continue;
-    const unita = m[2] ?? m[3] ?? "";
+    // Un'eccezione dichiarata nella stessa frase toglie il carattere di claim:
+    // «ne parliamo in venti minuti» è la durata di una call, non un dato di
+    // prodotto — falso positivo già pagato una volta.
+    const frase = fraseAttorno(testo, m.index, m[0].length);
+    if (eccezioni.some((r) => r.test(frase))) continue;
+    const unita = m[2] ?? m[0].replace(/^[\d.,\s%]+/, "") ?? "";
     trovate.push({
       regola: "numero_non_documentato",
       descrizione: `Numero "${m[1]}" accostato a "${unita}" non è fra i dati documentati (${ELENCO_DOCUMENTATI}) — non basta la cifra, serve il contesto giusto: «99% di origine naturale» sì, «99% di sconto» no. Marca [DA CONFERMARE] o rimuovi`,
