@@ -1,0 +1,13 @@
+[Unit]
+Description=SHEis Workers — creative_worker (3 varianti per contenuto approvato)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=alkemia
+WorkingDirectory=/home/alkemia/sheis-workers
+EnvironmentFile=/home/alkemia/sheis-workers/.env
+ExecStart=/usr/bin/python3 /home/alkemia/sheis-workers/creative_worker.py
+StandardOutput=journal
+StandardError=journal

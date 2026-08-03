@@ -1,0 +1,16 @@
+[Unit]
+Description=SHEis Workers — ingest_metriche_ig (raccolta metriche reali @sheisbeautyhair)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=alkemia
+WorkingDirectory=/home/alkemia/sheis-workers
+EnvironmentFile=/home/alkemia/sheis-workers/.env
+# ⚠️ Ogni run costa 3 chiamate ScrapeCreators (profilo + post + reel), a
+# credito reale. LIVE=1 va messo QUI (o in .env) solo dopo aver verificato il
+# budget crediti residuo.
+ExecStart=/usr/bin/python3 /home/alkemia/sheis-workers/ingest_metriche_ig.py
+StandardOutput=journal
+StandardError=journal

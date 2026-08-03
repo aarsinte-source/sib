@@ -1,0 +1,10 @@
+[Unit]
+Description=Ogni 15 minuti — publisher_zernio decide da solo se è dentro la finestra 08:00-18:30 Europe/Rome (mai domenica); il timer gira più spesso, il worker si ferma quando non è il momento.
+
+[Timer]
+OnCalendar=*-*-* *:00,15,30,45:00
+Persistent=false
+Unit=sheis-publisher.service
+
+[Install]
+WantedBy=timers.target
