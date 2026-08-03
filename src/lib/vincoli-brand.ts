@@ -1,7 +1,7 @@
 /**
  * GENERATO da sincronizza_brand.py — NON modificare a mano.
  * 
- * Le liste qui sotto vengono da BRAND-IDENTITY_sheis_2026-08-03.json (impronta 85672b97c6bd1e63).
+ * Le liste qui sotto vengono da BRAND-IDENTITY_sheis_2026-08-03.json (impronta 86e45609bfb204f3).
  * Modificarle qui significa reintrodurre esattamente il difetto per cui
  * questo file esiste: quattro linter con quattro copie divergenti delle
  * stesse regole, e verdetti opposti sullo stesso testo.
@@ -10,7 +10,7 @@
  *     python3 ~/alkemia-sheis-backend/sincronizza_brand.py --allinea
  * 
  */
-export const IMPRONTA_FONTE = "85672b97c6bd1e63";
+export const IMPRONTA_FONTE = "86e45609bfb204f3";
 
 export type NumeroDocumentato = {
   valore: string;

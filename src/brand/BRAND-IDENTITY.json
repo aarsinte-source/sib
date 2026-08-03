@@ -325,6 +325,13 @@
       "distributore-italia",
       "salone"
     ],
+    "classificazione_candidato": [
+      "salone",
+      "distributore",
+      "non-pertinente",
+      "incerto"
+    ],
+    "classificazione_candidato_nota": "⚠️ Terza divergenza sulla STESSA regola, misurata il 2026-08-03: il vincolo del database vuole «non-pertinente» col trattino, mentre la discovery Instagram e il tipo dichiarato nello Studio usavano «non_pertinente» col trattino basso. Risultato: 112 candidati reali già trovati e già scorati che il database rifiutava in blocco. La regola c'era ed era scritta; mancava il VALORE, quindi ognuno l'ha dedotta per conto suo. Una regola senza l'elenco dei valori non è una regola.",
     "brand": [
       "sheis-color",
       "babilon",
