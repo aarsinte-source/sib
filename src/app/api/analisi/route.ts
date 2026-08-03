@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { openaiJSON, segnaliMercato, strArray } from "@/lib/openai";
+import { generaJSON, segnaliMercato, strArray, type Motore } from "@/lib/openai";
 import { regoleBrandTesto } from "@/lib/brand";
 import { richiedeRuolo, RUOLI_PROPONE } from "@/lib/auth";
 import { rispondiErrore } from "@/lib/api";
@@ -29,6 +29,8 @@ export type Analisi = {
   angoli: string[];
   fonti: string[];
   creatoIl: string;
+  /** Quale motore ha generato questa analisi — visibile in UI (SPEC.md §"Il degrado si dichiara"). */
+  motore: Motore;
 };
 
 export async function POST(req: Request) {
@@ -46,7 +48,7 @@ export async function POST(req: Request) {
       `Tema: "${query}".` +
       (fonti.length ? `\n\nSegnali grezzi dal web (spunti, non citarne prezzi):\n- ${fonti.join("\n- ")}` : "");
 
-    const raw = (await openaiJSON(SYSTEM, user)) as Record<string, unknown>;
+    const { dati: raw, motore } = await generaJSON(SYSTEM, user);
 
     const analisi: Analisi = {
       query,
@@ -56,6 +58,7 @@ export async function POST(req: Request) {
       angoli: strArray(raw.angoli),
       fonti,
       creatoIl: new Date().toISOString(),
+      motore,
     };
 
     return NextResponse.json({ analisi });

@@ -33,6 +33,18 @@ export type Sessione = {
 const COOKIE_NAME = "sheis_studio_sessione";
 const SCRYPT_PARAMS = { N: 16384, r: 8, p: 1, maxmem: 64 * 1024 * 1024 } as const;
 
+/**
+ * Durata massima della sessione, applicata DENTRO il contenuto firmato — non
+ * solo come attributo del cookie del browser. Un cookie che scade è una
+ * cortesia del browser, non una garanzia: chi ripresenta il valore del token
+ * direttamente (fuori dal cookie, es. copiato da un log o un proxy) bypassa
+ * quella scadenza. Con `iat` dentro il payload firmato, `leggiTokenSessione`
+ * rifiuta un token vecchio anche fuori dal browser, e la sessione resta
+ * revocata "per il tempo" anche dopo il logout se qualcuno ne conservasse
+ * una copia. Stesso valore del maxAge del cookie, così i due non divergono.
+ */
+const SESSIONE_DURATA_MS = 1000 * 60 * 60 * 24 * 14; // 14 giorni
+
 function segreto(): string {
   const s = process.env.SESSION_SECRET;
   if (!s) {
@@ -71,8 +83,11 @@ export function verificaPassword(password: string, memorizzato: string): boolean
 
 /* ---------------------------------------------------------------- token */
 
+type PayloadFirmato = Sessione & { iat: number };
+
 export function creaTokenSessione(s: Sessione): string {
-  const payload = Buffer.from(JSON.stringify(s), "utf8").toString("base64url");
+  const conScadenza: PayloadFirmato = { ...s, iat: Date.now() };
+  const payload = Buffer.from(JSON.stringify(conScadenza), "utf8").toString("base64url");
   return `${payload}.${firma(payload)}`;
 }
 
@@ -84,9 +99,13 @@ export function leggiTokenSessione(token: string | undefined | null): Sessione |
   const sig = token.slice(idx + 1);
   if (firma(payload) !== sig) return null;
   try {
-    const s = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as Sessione;
+    const s = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as Partial<PayloadFirmato>;
     if (!s.id || !s.email || !s.ruolo || !RUOLI.includes(s.ruolo)) return null;
-    return s;
+    // Token emesso prima di questa modifica (senza `iat`) o più vecchio della
+    // durata massima: rifiutato come se la firma fosse invalida — fail closed,
+    // forza un nuovo login invece di accettare una sessione senza scadenza.
+    if (typeof s.iat !== "number" || Date.now() - s.iat > SESSIONE_DURATA_MS) return null;
+    return { id: s.id, email: s.email, nome: s.nome ?? "", ruolo: s.ruolo };
   } catch {
     return null;
   }
@@ -101,7 +120,7 @@ export async function impostaCookieSessione(s: Sessione): Promise<void> {
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    maxAge: 60 * 60 * 24 * 14, // 14 giorni
+    maxAge: SESSIONE_DURATA_MS / 1000, // stesso valore della scadenza dentro il token firmato
   });
 }
 

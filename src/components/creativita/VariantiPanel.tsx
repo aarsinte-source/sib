@@ -51,6 +51,7 @@ export default function VariantiPanel({
   const [qualita, setQualita] = useState<QualitaImmagine>("2k_high");
   const [busy, setBusy] = useState(false);
   const [errore, setErrore] = useState("");
+  const [riprovando, setRiprovando] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -114,35 +115,61 @@ export default function VariantiPanel({
     if (r.ok) setVarianti((prev) => prev?.map((v) => (v.id === varianteId ? { ...v, stato: "scartata" } : v)) ?? null);
   }
 
+  /** Chiude il vicolo cieco: nessuna variante è utilizzabile, si cancellano e si riparte da capo. */
+  async function riprova() {
+    setRiprovando(true);
+    setErrore("");
+    const r = await fetch(`/api/contenuti/${contenuto.id}/varianti/riprova`, { method: "POST" });
+    const j = (await r.json().catch(() => ({}))) as { error?: string };
+    setRiprovando(false);
+    if (r.ok) {
+      setVarianti([]);
+      onCambiato();
+    } else {
+      setErrore(j.error || "Non è stato possibile ritentare.");
+    }
+  }
+
   if (caricando) return <p className="mt-4 text-xs text-[var(--on-surface-3)]">Carico le varianti…</p>;
 
   if (varianti && varianti.length > 0) {
+    const nessunaUtilizzabile = varianti.every((v) => v.stato !== "pronta" && v.stato !== "approvata");
     return (
-      <div className="mt-4 grid gap-4 sm:grid-cols-3">
-        {varianti.map((v) => (
-          <div key={v.id} className="rounded-md border border-[var(--hairline)] p-3">
-            <div className="mb-2 flex items-center justify-between">
-              <span className="text-xs text-[var(--on-surface-3)]">Variante {v.indice}</span>
-              <Badge colore={COLORE[v.stato]}>{v.stato}</Badge>
-            </div>
-            <p className="text-xs text-[var(--on-surface-2)]">{v.angolo_visivo}</p>
-            {v.asset_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={v.asset_url} alt={`Variante ${v.indice}`} className="mt-2 w-full rounded border border-[var(--hairline)]" />
-            ) : null}
-            {v.errore ? <p className="mt-2 text-xs text-[var(--color-blocked)]">{v.errore}</p> : null}
-            {v.stato === "pronta" && puoLanciare ? (
-              <div className="mt-2 flex gap-1.5">
-                <Button onClick={() => approva(v.id)} disabled={busy}>
-                  Approva
-                </Button>
-                <Button variant="ghost" onClick={() => scarta(v.id)} disabled={busy}>
-                  Scarta
-                </Button>
+      <div className="mt-4">
+        <div className="grid gap-4 sm:grid-cols-3">
+          {varianti.map((v) => (
+            <div key={v.id} className="rounded-md border border-[var(--hairline)] p-3">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-xs text-[var(--on-surface-3)]">Variante {v.indice}</span>
+                <Badge colore={COLORE[v.stato]}>{v.stato}</Badge>
               </div>
-            ) : null}
+              <p className="text-xs text-[var(--on-surface-2)]">{v.angolo_visivo}</p>
+              {v.asset_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={v.asset_url} alt={`Variante ${v.indice}`} className="mt-2 w-full rounded border border-[var(--hairline)]" />
+              ) : null}
+              {v.errore ? <p className="mt-2 text-xs text-[var(--color-blocked)]">{v.errore}</p> : null}
+              {v.stato === "pronta" && puoLanciare ? (
+                <div className="mt-2 flex gap-1.5">
+                  <Button onClick={() => approva(v.id)} disabled={busy}>
+                    Approva
+                  </Button>
+                  <Button variant="ghost" onClick={() => scarta(v.id)} disabled={busy}>
+                    Scarta
+                  </Button>
+                </div>
+              ) : null}
+            </div>
+          ))}
+        </div>
+        {puoLanciare && nessunaUtilizzabile ? (
+          <div className="mt-3">
+            <Button variant="ghost" onClick={riprova} disabled={busy || riprovando}>
+              {riprovando ? "Ripristino…" : "Nessuna variante riuscita — cancella e riprova"}
+            </Button>
           </div>
-        ))}
+        ) : null}
+        {errore ? <p className="mt-2 text-xs text-[var(--color-blocked)]">{errore}</p> : null}
       </div>
     );
   }

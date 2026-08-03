@@ -400,6 +400,34 @@ export async function scartaVariante(varianteId: string, contenutoId: string, at
   await scriviLog({ contenutoId, azione: "variante_scartata", attore, attoreId, dettaglio: { varianteId } });
 }
 
+/**
+ * Segna il contenuto in errore quando NESSUNA delle varianti generate è
+ * andata a buon fine (tutte "errore", o alcune mai partite perché il tetto
+ * giornaliero Higgsfield ha bloccato la coda a metà). Senza questo, il
+ * contenuto resta "in_produzione" per sempre: nessuno stato lo segnala come
+ * bloccato, e la rotta di generazione non ripartirebbe comunque perché le
+ * righe delle varianti esistono già (vedi riprovaVarianti).
+ */
+export async function segnaContenutoInErrore(id: string): Promise<Contenuto> {
+  return patchContenuto(id, { stato: "errore" });
+}
+
+/**
+ * Il vicolo cieco corretto: cancella TUTTE le varianti del contenuto e lo
+ * riporta ad "approvato", così /varianti/genera può ripartire pulito. Va
+ * chiamata solo quando nessuna variante esistente è utilizzabile (pronta o
+ * approvata) — quel controllo vive nella route, non qui, perché è una
+ * decisione di autorizzazione/flusso, non di accesso ai dati.
+ */
+export async function riprovaVarianti(contenutoId: string): Promise<Contenuto> {
+  await sbFetch("sheis_varianti", {
+    method: "DELETE",
+    query: `contenuto_id=eq.${contenutoId}`,
+    prefer: "return=minimal",
+  });
+  return patchContenuto(contenutoId, { stato: "approvato" });
+}
+
 /* ------------------------------------------------------------ calendario */
 
 export async function metteInCoda(input: {

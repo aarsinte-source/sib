@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { openaiJSON, pick, str } from "@/lib/openai";
+import { generaJSON, pick, str } from "@/lib/openai";
 import { BRANDS, CANALI, FORMATI, LINGUE, PUBBLICI, regoleBrandTesto } from "@/lib/brand";
 import { creaPiano, creaContenuti, type NuovoContenuto } from "@/lib/dati";
 import { richiedeRuolo, RUOLI_PROPONE } from "@/lib/auth";
@@ -58,7 +58,7 @@ Analisi di mercato:
 - lessico: ${analisi.lessico.join("; ")}
 - angoli: ${analisi.angoli.join("; ")}`;
 
-    const raw = (await openaiJSON(SYSTEM, user)) as Record<string, unknown>;
+    const { dati: raw, motore } = await generaJSON(SYSTEM, user);
     const lista = Array.isArray(raw.posts) ? raw.posts : [];
 
     const piano = await creaPiano(query);
@@ -91,7 +91,7 @@ Analisi di mercato:
     }
 
     const contenuti = await creaContenuti(righe);
-    return NextResponse.json({ piano, contenuti });
+    return NextResponse.json({ piano, contenuti, motore });
   } catch (e) {
     return rispondiErrore(e);
   }

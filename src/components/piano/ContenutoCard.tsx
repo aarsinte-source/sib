@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { Brand, Canale, Formato, Lingua, Pubblico } from "@/lib/brand";
 import type { Ruolo } from "@/lib/ruoli";
 import { Badge, Button, Label, inputCls } from "@/components/ui";
-import { labelStato, metaRiga } from "@/components/piano/format";
+import { labelStato, metaRiga, ETICHETTA_MOTORE } from "@/components/piano/format";
 
 export type ContenutoDTO = {
   id: string;
@@ -61,6 +61,7 @@ export default function ContenutoCard({
 
   const [modModo, setModModo] = useState<null | "ai" | "manuale">(null);
   const [notaAI, setNotaAI] = useState("");
+  const [motoreAI, setMotoreAI] = useState<string | null>(null);
   const [campi, setCampi] = useState({
     hook: contenuto.hook,
     copy: contenuto.copy,
@@ -112,6 +113,7 @@ export default function ContenutoCard({
     setBusy(null);
     if (ok) {
       onModificato(json.contenuto as ContenutoDTO);
+      setMotoreAI((json.motore as string) ?? null);
       setModModo(null);
       setNotaAI("");
     } else setErrore((json.error as string) || "Rielaborazione non riuscita.");
@@ -165,6 +167,11 @@ export default function ContenutoCard({
       {contenuto.feedback_mauro ? (
         <p className="mt-3 rounded-md border border-[var(--hairline)] bg-[var(--surface-2)] px-3 py-2 text-xs">
           Nota: {contenuto.feedback_mauro}
+        </p>
+      ) : null}
+      {motoreAI ? (
+        <p className="mt-2 text-xs text-[var(--on-surface-3)]">
+          Ultima rielaborazione AI generata con: {ETICHETTA_MOTORE[motoreAI] ?? motoreAI}
         </p>
       ) : null}
 

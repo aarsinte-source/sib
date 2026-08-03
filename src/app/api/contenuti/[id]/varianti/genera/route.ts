@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getContenuto, creaVarianti, listaVarianti, aggiornaVariante, scriviLog } from "@/lib/dati";
+import { getContenuto, creaVarianti, listaVarianti, aggiornaVariante, scriviLog, segnaContenutoInErrore } from "@/lib/dati";
 import { sbFetch } from "@/lib/supabase";
 import { costoStimato, costruisciVarianti, generaImmagine, QUALITA_LABEL, type QualitaImmagine } from "@/lib/higgsfield";
 import { richiedeRuolo, RUOLI_APPROVA } from "@/lib/auth";
@@ -52,7 +52,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     const esistenti = await listaVarianti(id);
     if (esistenti.length > 0) {
-      return NextResponse.json({ error: "Esistono già varianti per questo contenuto." }, { status: 409 });
+      return NextResponse.json(
+        {
+          error:
+            "Esistono già varianti per questo contenuto. Se sono tutte in errore o nessuna è pronta, usa \"Ritenta\" invece di generare di nuovo.",
+        },
+        { status: 409 },
+      );
     }
 
     await sbFetch("sheis_contenuti", {
@@ -95,6 +101,16 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     });
 
     const finali = await listaVarianti(id);
+    // Nessuna variante utilizzabile (tutte in errore, o alcune mai partite
+    // perché il tetto giornaliero ha bloccato la coda a metà): il contenuto
+    // va segnato in errore, altrimenti resta "in_produzione" per sempre
+    // senza che nessuno stato lo dichiari (vicolo cieco corretto insieme a
+    // /varianti/riprova).
+    const nessunaRiuscita = finali.length > 0 && !finali.some((v) => v.stato === "pronta" || v.stato === "approvata");
+    if (nessunaRiuscita) {
+      await segnaContenutoInErrore(id);
+    }
+
     return NextResponse.json({ varianti: finali, costo });
   } catch (e) {
     return rispondiErrore(e);

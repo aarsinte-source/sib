@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import type { Ruolo } from "@/lib/ruoli";
 import { Card, H2, Eyebrow, Button, Banner, inputCls } from "@/components/ui";
 import ContenutoCard, { type ContenutoDTO } from "@/components/piano/ContenutoCard";
+import { ETICHETTA_MOTORE } from "@/components/piano/format";
 
 export type Analisi = {
   query: string;
@@ -13,6 +14,7 @@ export type Analisi = {
   angoli: string[];
   fonti: string[];
   creatoIl: string;
+  motore?: string;
 };
 
 type StatoGlobale = { ok: boolean; motivo?: string } | null;
@@ -28,6 +30,7 @@ export default function PianoClient({ ruolo }: { ruolo: Ruolo }) {
   const [contenuti, setContenuti] = useState<ContenutoDTO[]>([]);
   const [caricando, setCaricando] = useState(true);
   const [errore, setErrore] = useState("");
+  const [motorePiano, setMotorePiano] = useState<string | null>(null);
 
   const ricaricaContenuti = useCallback(async () => {
     setCaricando(true);
@@ -91,9 +94,10 @@ export default function PianoClient({ ruolo }: { ruolo: Ruolo }) {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ query: analisi.query, analisi }),
       });
-      const j = (await r.json()) as { contenuti?: ContenutoDTO[]; error?: string };
+      const j = (await r.json()) as { contenuti?: ContenutoDTO[]; motore?: string; error?: string };
       if (r.ok && j.contenuti) {
         setContenuti((prev) => [...j.contenuti!, ...prev]);
+        setMotorePiano(j.motore ?? null);
         setAnalisi(null);
         setTema("");
       } else {
@@ -149,6 +153,11 @@ export default function PianoClient({ ruolo }: { ruolo: Ruolo }) {
 
         {analisi ? (
           <div className="mt-6 space-y-5">
+            {analisi.motore ? (
+              <p className="text-xs text-[var(--on-surface-3)]">
+                Generato con: {ETICHETTA_MOTORE[analisi.motore] ?? analisi.motore}
+              </p>
+            ) : null}
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <BloccoAnalisi titolo="Dolori" items={analisi.pain} />
               <BloccoAnalisi titolo="Desideri" items={analisi.desideri} />
@@ -159,6 +168,11 @@ export default function PianoClient({ ruolo }: { ruolo: Ruolo }) {
               {generandoPiano ? "Genero il piano…" : "Genera piano editoriale (8 post) da questa analisi"}
             </Button>
           </div>
+        ) : null}
+        {motorePiano ? (
+          <p className="mt-3 text-xs text-[var(--on-surface-3)]">
+            Ultimo piano generato con: {ETICHETTA_MOTORE[motorePiano] ?? motorePiano}
+          </p>
         ) : null}
       </section>
 

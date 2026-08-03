@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getContenuto, modificaContenutoAI } from "@/lib/dati";
-import { openaiJSON, str } from "@/lib/openai";
+import { generaJSON, str } from "@/lib/openai";
 import { regoleBrandTesto } from "@/lib/brand";
 import { richiedeRuolo, RUOLI_PROPONE } from "@/lib/auth";
 import { rispondiErrore } from "@/lib/api";
@@ -38,7 +38,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
 Nota di modifica: ${nota || "(nessuna nota specifica: migliora incisività e chiarezza)"}`;
 
-    const raw = (await openaiJSON(SYSTEM, user)) as Record<string, unknown>;
+    const { dati: raw, motore } = await generaJSON(SYSTEM, user);
 
     const aggiornato = await modificaContenutoAI(
       id,
@@ -53,7 +53,7 @@ Nota di modifica: ${nota || "(nessuna nota specifica: migliora incisività e chi
       sessione.nome,
       sessione.id,
     );
-    return NextResponse.json({ contenuto: aggiornato });
+    return NextResponse.json({ contenuto: aggiornato, motore });
   } catch (e) {
     return rispondiErrore(e);
   }

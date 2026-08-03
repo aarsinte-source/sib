@@ -5,6 +5,13 @@ export function metaRiga(c: { brand: Brand; canale: Canale; formato: Formato; li
   return `${BRAND_LABEL[c.brand]} · ${c.canale} · ${c.formato} · ${c.lingua}${c.pubblico ? ` · ${c.pubblico}` : ""}`;
 }
 
+/** Etichetta del motore di generazione, per mostrare in UI da cosa è nato un testo
+ * (SPEC.md §"Il degrado si dichiara" — un ripiego silenzioso è un guasto mai riparato). */
+export const ETICHETTA_MOTORE: Record<string, string> = {
+  claude: "Claude (locale)",
+  openai: "OpenAI",
+};
+
 export function labelStato(stato: string): string {
   const mappa: Record<string, string> = {
     in_attesa: "In attesa",
