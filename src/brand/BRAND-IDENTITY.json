@@ -257,7 +257,66 @@
         "ordinato",
         "ordinata"
       ],
-      "_eccezioni_motivo": "Parole innocenti catturate dal confronto per radice: «ordina» + 3 lettere prende anche «ordinario». Verificate una per una contro i pattern generati — non è una lista precauzionale. Senza, il filtro rifiuta testo lecito, e un cancello che blocca il lecito viene disattivato da chi lo usa."
+      "_eccezioni_motivo": "Parole innocenti catturate dal confronto per radice: «ordina» + 3 lettere prende anche «ordinario». Verificate una per una contro i pattern generati — non è una lista precauzionale. Senza, il filtro rifiuta testo lecito, e un cancello che blocca il lecito viene disattivato da chi lo usa.",
+      "firewall_pattern": [
+        {
+          "pattern": "\\bm[eé]todo?\\s*[-–_.]?\\s*29\\b",
+          "cosa": "Metodo 29 in ogni grafia (spazio, trattino, punto, unito)"
+        },
+        {
+          "pattern": "\\bmethod\\s*[-–_.]?\\s*29\\b",
+          "cosa": "Method 29 (EN)"
+        },
+        {
+          "pattern": "\\bm\\s*[-–_.]?\\s*29\\b",
+          "cosa": "sigla M29 / M-29 / M.29"
+        },
+        {
+          "pattern": "\\bmetodo\\s*[-–_.]?\\s*ventinov\\w*",
+          "cosa": "Metodo ventinove in lettere"
+        },
+        {
+          "pattern": "(ventinovesim\\w*|ventinove|\\b29\\b)[^.\\n]{0,60}(pilastr\\w*|metodo|sistema|approcci\\w*|passagg\\w*|pass[io]|fas[ei]|step|segreto)",
+          "cosa": "parafrasi: il numero ventinove vicino a metodo/sistema/approccio/passi"
+        },
+        {
+          "pattern": "(pilastr\\w*|metodo|sistema|approcci\\w*|passagg\\w*|pass[io]|fas[ei]|step|segreto)[^.\\n]{0,60}(ventinovesim\\w*|ventinove|\\b29\\b)",
+          "cosa": "parafrasi, ordine invertito"
+        }
+      ],
+      "_firewall_motivo": "⚠️ Misurato dal collaudo il 2026-08-03: «il metodo-29» col trattino e «approccio ventinove passi, applicato al metodo» passavano da due filtri su quattro. Il firewall è la regola che il cliente ha dichiarato NON negoziabile: un elenco di tre stringhe letterali non la difende. Le forme si esprimono come espressioni regolari, e valgono per tutti e quattro insieme.",
+      "forme_flesse": [
+        "sklepie",
+        "sklepu",
+        "sklepy",
+        "sklepem",
+        "gekauft",
+        "gekaufte",
+        "kauft",
+        "kaufe",
+        "einkauf",
+        "einkaufen",
+        "cestas",
+        "cestita",
+        "comprado",
+        "comprada",
+        "comprou",
+        "achete",
+        "achetez",
+        "achetons"
+      ],
+      "_forme_flesse_motivo": "⚠️ Due buchi misurati dal collaudo, entrambi passati da TUTTI E QUATTRO i filtri: «w naszym sklepie internetowym» (locativo polacco — «sklep» ha 5 caratteri e il confronto per radice parte da 6) e «haben das Produkt gekauft» (participio tedesco — il prefisso GE- spezza il confine di parola davanti a «kauf»). Le forme che una regola generale non prende si elencano: è meno elegante e funziona.",
+      "negazioni_ammesse": [
+        "non (siamo|vendiamo|c'?è|esiste)[^.\\n]{0,30}(online|e-?commerce|vendita)",
+        "n[éeè]\\s+(amazon|e-?commerce|online)",
+        "nessun[ao]?\\s+(e-?commerce|vendita online|negozio online)",
+        "niente\\s+e-?commerce",
+        "we don'?t sell online",
+        "no online sales",
+        "no vendemos online",
+        "no estamos en venta online"
+      ],
+      "_negazioni_motivo": "⚠️ «Non siamo in vendita online, né Amazon né e-commerce nostro» è testo APPROVATO e usato nel copione: nega il canale, non lo propone. Lo Studio lo bloccava perché conteneva «e-commerce». Un filtro che rifiuta il testo approvato viene disattivato da chi lo usa."
     },
     "vietato_di_stile": [
       "claim numerici non documentati",
@@ -314,6 +373,14 @@
       {
         "pattern": "\\b(senza\\s+alcun|zero)\\s+(effett\\w+\\s+collateral\\w+|rischi\\w*)",
         "cosa": "assenza assoluta di rischi"
+      },
+      {
+        "pattern": "\\b(due|tre|quattro|cinque|sei|sette|otto|nove|dieci)\\s+fas[ie]\\b",
+        "cosa": "numero di fasi scritto in lettere: il documentato è TRE (YOUNIC). «cinque fasi» passava da tutti e quattro"
+      },
+      {
+        "pattern": "\\b(due|tre|quattro|cinque|sei|sette|otto|nove|dieci|venti|trenta|cinquanta|cento)\\s+(nuance|tonalit\\w+|client\\w+|salon\\w+|distributor\\w+)\\b|\\b(due|tre|quattro|cinque|sei|sette|otto|nove|dieci|venti|trenta|cinquanta|cento)\\s+minut\\w+\\s+(di\\s+)?(posa|applicazion\\w+|trattament\\w+)",
+        "cosa": "quantità di PRODOTTO scritta in lettere fuori dall'elenco documentato (le durate di una conversazione — «ne parliamo in venti minuti» — sono lecite: conta l'oggetto, non il numero)"
       }
     ],
     "_claim_motivo": "I claim si esprimono come FORME, non come parole: «clinicamente provata» al femminile sfuggiva a chi cercava «provato». Misurato il 2026-08-03 su una batteria d'insieme: passava da tre filtri su quattro, e il quarto — il media buyer — non aveva alcuna regola sui claim. Stanno qui perché valgano uguali ovunque; ogni linter le legge da vincoli_brand, nessuno le ricopia."
@@ -480,5 +547,15 @@
     "Il caso del distributore di Pisa — otto clienti nuovi in cinque mesi — è la prova sociale più forte che SHEis abbia e non è mai stata raccontata. Serve il permesso del diretto interessato.",
     "Il dietro le quinte dell'Accademia in formato reel breve e ricorrente, non solo come resoconto dopo l'evento.",
     "La voce dei BRAND MENTALIST come serie: sono già un asset di marca, oggi citati una volta sola."
-  ]
+  ],
+  "differenze_per_canale": {
+    "_perche": "Non tutte le differenze fra i filtri sono difetti. Alcune sono la regola giusta applicata a contesti diversi. Vanno DICHIARATE, altrimenti a ogni collaudo qualcuno le riapre come se fossero un errore — e prima o poi le 'corregge', rompendo la regola vera.",
+    "prezzo_rinviato_alla_call": {
+      "frase_esempio": "I prezzi li vediamo in call, dipende dalla zona.",
+      "annuncio_pubblicitario": "BLOCCA — un'inserzione non ha una call in cui rinviare: la frase è solo una promessa di prezzo davanti a un pubblico freddo.",
+      "messaggio_di_outreach": "PASSA con avviso — è la risposta APPROVATA del copione a «quanto costa?»: nomina il prezzo per rinviarlo, che è il comportamento voluto.",
+      "contenuto_social": "PASSA con avviso — stesso ragionamento del messaggio.",
+      "verificato_il": "2026-08-03, unica divergenza rimasta su 26 casi del collaudo"
+    }
+  }
 }

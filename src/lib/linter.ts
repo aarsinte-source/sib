@@ -1,5 +1,8 @@
 import { BRAND, GUARDRAILS } from "@/lib/brand";
 import {
+  FORME_FLESSE,
+  NEGAZIONI_AMMESSE,
+  CLAIM_VIETATI,
   ECCEZIONI_RADICE,
   NUMERI_DOCUMENTATI,
   negozioEccezione,
@@ -49,7 +52,10 @@ function cercaTermini(testo: string, termini: readonly string[], regola: string,
   for (const termine of termini) {
     if (!termine) continue;
     // "€" e simili non hanno confini di parola: gestiti senza \b.
-    const haWordBoundary = /^[\p{L}\p{N}]/u.test(termine) && /[\p{L}\p{N}]$/u.test(termine);
+    // ⚠️ Il confine di parola `\b` è ASCII anche con la bandiera `u`: fra due
+    // caratteri arabi non esiste, quindi «متجر» dentro «متجرنا» non veniva
+    // mai trovato. Il confine ha senso solo per gli alfabeti latini.
+    const haWordBoundary = /[A-Za-z0-9]/.test(termine);
     // ⚠️ Confronto per RADICE, non per parola esatta — misurato il 2026-08-03.
     // Con i soli confini di parola, «koszyka» (genitivo polacco di «koszyk»)
     // passava indisturbato: le lingue slave declinano e quelle romanze concordano,
@@ -92,10 +98,26 @@ function checkPrezzi(testo: string): ViolazioneLinter[] {
 }
 
 /** Regola 2 — lessico da negozio, in ogni lingua. */
+const NEGAZIONI_RE = NEGAZIONI_AMMESSE.map((p) => new RegExp(p, "iu"));
+
+/**
+ * La frase NEGA il canale invece di proporlo?
+ *
+ * ⚠️ «Non siamo in vendita online, né Amazon né e-commerce nostro» è testo
+ * APPROVATO e usato nel copione: nega il canale, è la leva di SHEis. Questo
+ * filtro era l'UNICO dei quattro senza questa guardia, e lo bloccava perché
+ * conteneva «e-commerce». Un filtro che rifiuta il testo approvato viene
+ * disattivato da chi lo usa, e allora non ferma più niente.
+ */
+function negaIlCanale(testo: string): boolean {
+  return NEGAZIONI_RE.some((r) => r.test(testo));
+}
+
 function checkLessicoNegozio(testo: string): ViolazioneLinter[] {
+  if (negaIlCanale(testo)) return [];
   return cercaTermini(
     testo,
-    BRAND.lessico.vietato_assoluto.lessico_da_negozio,
+    [...BRAND.lessico.vietato_assoluto.lessico_da_negozio, ...FORME_FLESSE],
     "lessico_da_negozio",
     "Lessico da e-commerce/negozio non ammesso — il pubblico è sempre professionale",
   );
@@ -199,6 +221,21 @@ const CLAIM_ASSOLUTI: readonly { re: RegExp; cosa: string }[] = [
 
 function checkClaimAssoluti(testo: string): ViolazioneLinter[] {
   const trovate: ViolazioneLinter[] = [];
+  // ⚠️ I claim della fonte includono le quantità scritte in LETTERE: «YOUNIC
+  // lavora in cinque fasi» passava da questo filtro, e le fasi documentate sono
+  // TRE. Si consulta comunque l'elenco dei numeri leciti, altrimenti si
+  // bloccherebbe anche «tre fasi», che è il dato vero.
+  for (const { pattern, cosa } of CLAIM_VIETATI) {
+    const re = new RegExp(pattern, "iu");
+    const m = re.exec(testo);
+    if (m && !numeroDocumentato(testo, m.index, m.index + m[0].length)) {
+      trovate.push({
+        regola: "claim_non_documentato",
+        descrizione: `Claim non dimostrabile: ${cosa} — riformula su un dato documentato o marca [DA CONFERMARE]`,
+        frase: estraiContesto(testo, m.index, m[0].length),
+      });
+    }
+  }
   for (const { re, cosa } of CLAIM_ASSOLUTI) {
     re.lastIndex = 0;
     const m = re.exec(testo);
