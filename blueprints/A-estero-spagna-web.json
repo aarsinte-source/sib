@@ -154,7 +154,7 @@
     "url_placeholder": "<<LANDING_URL:distributori-es>>?utm_source=meta&utm_medium=paid&utm_campaign={{campaign.name}}&utm_content={{ad.name}}",
     "url_atteso": "https://<dominio-confermato>/es/distributori#richiesta — VERIFICARE il dominio reale prima di spendere: il sito ~/alkemia-sheis-web e' oggi solo su anteprima Vercel (noindex), sheishair.com resta il sito storico WordPress e NON ha questa pagina.",
     "form_esistente": "src/components/sections/distributori/ApplicationSection.tsx (JsonForm) — campi gia' corretti: ragione sociale, P.IVA, paese, citta', sito, area di mercato.",
-    "endpoint": "POST /api/distributori-lead (~/alkemia-sheis-web) — scrive in sheis_lead_ads (Supabase). Vedi ~/alkemia-sheis-backend/migrations/0003_lead_ads.sql.",
+    "endpoint": "POST /api/distributori-lead (~/alkemia-sheis-web) — scrive in sheis_lead_ads (Supabase). Vedi ~/alkemia-sheis-backend/migrations/0006_lead_ads.sql.",
     "dipendenza_bloccante": "La tabella sheis_lead_ads non esiste finche' qualcuno non applica la migrazione con un Supabase Personal Access Token (sbp_...) — vedi applica_migrazioni.py. Finche' manca, l'endpoint risponde errore onesto (mai un falso 'grazie, ti contatteremo' quando il lead va perso)."
   },
 
