@@ -3,7 +3,8 @@
     "cosa": "Quale FONTE interrogare per quale capacità di ricerca di mercato. FONTE UNICA: il motore la legge, non la ricopia.",
     "perche": "Le stesse informazioni si possono comprare da più parti a prezzi molto diversi. Senza una regola scritta, chi costruisce sceglie la fonte che ha in mente in quel momento — e si finisce a pagare due volte per un dato che era già compreso in un abbonamento.",
     "regola_di_precedenza": "1) ScrapeCreators e DataForSEO PRIMA: sono già pagati a canone, una chiamata in più non costa nulla. 2) Monid DOPO, e SOLO per ciò che i primi due non sanno fare: ogni run scala il saldo Monid (oggi $17,24). 3) Se nessuno copre la capacità, si dice che non si copre — non si improvvisa uno scraper.",
-    "misurato_il": "2026-08-03"
+    "misurato_il": "2026-08-03",
+    "aggiornato": "2026-08-04"
   },
   "capacita": {
     "organico-instagram": {
@@ -11,31 +12,36 @@
       "fonte": "scrapecreators",
       "come": "mcp__scrape-creators__v1_instagram_profile · v2_instagram_user_posts · v1_instagram_user_reels · v1_instagram_search_hashtag",
       "costo": "compreso nel canone",
-      "alternativa_monid": "apify /apify/instagram-profile-scraper — NON usarla: stessa cosa, ma a consumo"
+      "alternativa_monid": "apify /apify/instagram-profile-scraper — NON usarla: stessa cosa, ma a consumo",
+      "disponibile": true
     },
     "organico-tiktok": {
       "cosa": "Profilo, video, commenti, hashtag e suoni TikTok.",
       "fonte": "scrapecreators",
       "come": "v1_tiktok_profile · v3_tiktok_profile_videos · v1_tiktok_search_hashtag · v1_tiktok_search_keyword",
-      "costo": "compreso nel canone"
+      "costo": "compreso nel canone",
+      "disponibile": true
     },
     "organico-youtube": {
       "cosa": "Canale, video, short, commenti, trascrizioni YouTube.",
       "fonte": "scrapecreators",
       "come": "v1_youtube_channel · v1_youtube_channel_videos · v1_youtube_video_transcript",
-      "costo": "compreso nel canone"
+      "costo": "compreso nel canone",
+      "disponibile": true
     },
     "organico-linkedin": {
       "cosa": "Profilo e post aziendali LinkedIn.",
       "fonte": "scrapecreators",
       "come": "v1_linkedin_company · v1_linkedin_company_posts · v1_linkedin_search_posts",
-      "costo": "compreso nel canone"
+      "costo": "compreso nel canone",
+      "disponibile": true
     },
     "organico-facebook": {
       "cosa": "Pagina, post, reel, commenti Facebook.",
       "fonte": "scrapecreators",
       "come": "v1_facebook_profile · v1_facebook_profile_posts · v1_facebook_profile_reels",
-      "costo": "compreso nel canone"
+      "costo": "compreso nel canone",
+      "disponibile": true
     },
     "pubblicitario-meta": {
       "cosa": "Inserzioni attive di un brand su Facebook e Instagram, con da quanto girano.",
@@ -43,33 +49,39 @@
       "come": "v1_facebook_adLibrary_company_ads · v1_facebook_adLibrary_search_ads · v1_facebook_adLibrary_ad_transcript",
       "costo": "compreso nel canone",
       "alternativa_monid": "apify /curious_coder/facebook-ads-library-scraper — stessa capacità, a consumo",
-      "nota": "I GIORNI DI ATTIVITÀ di un'inserzione sono la misura più onesta che si possa avere dall'esterno: nessuno tiene acceso per 90 giorni qualcosa che perde soldi."
+      "nota": "I GIORNI DI ATTIVITÀ di un'inserzione sono la misura più onesta che si possa avere dall'esterno: nessuno tiene acceso per 90 giorni qualcosa che perde soldi.",
+      "disponibile": true
     },
     "pubblicitario-tiktok": {
       "cosa": "Inserzioni TikTok di un brand o di una nicchia.",
       "fonte": "scrapecreators",
       "come": "v1_tiktok_ad_library_search · v1_tiktok_ad_library_ad",
-      "costo": "compreso nel canone",
-      "alternativa_monid": "tikhub /api/v1/tiktok/ads/search_ads e get_top_ads_spotlight — utili se ScrapeCreators non copre il paese cercato"
+      "costo": "non disponibile con questo abbonamento",
+      "alternativa_monid": "tikhub /api/v1/tiktok/ads/search_ads e get_top_ads_spotlight — utili se ScrapeCreators non copre il paese cercato",
+      "disponibile": false,
+      "attenzione": "⚠️ MISURATO il 2026-08-04: la libreria inserzioni TikTok risponde 404 su tutte le rotte provate (/v1/tiktok/ad_library/search e due varianti). L'organico TikTok funziona: il buco è solo sul pubblicitario. Dichiararlo disponibile farebbe leggere «nessuno fa pubblicità su TikTok in questo settore» a chi invece sta guardando un guasto."
     },
     "pubblicitario-google": {
       "cosa": "Inserzioni Google e YouTube di un inserzionista.",
       "fonte": "scrapecreators",
       "come": "v1_google_adLibrary_advertisers_search · v1_google_company_ads · v1_google_ad",
-      "costo": "compreso nel canone"
+      "costo": "compreso nel canone",
+      "disponibile": true
     },
     "pubblicitario-linkedin": {
       "cosa": "Inserzioni LinkedIn di un'azienda.",
       "fonte": "scrapecreators",
       "come": "v1_linkedin_ads_search · v1_linkedin_ad",
-      "costo": "compreso nel canone"
+      "costo": "compreso nel canone",
+      "disponibile": true
     },
     "domanda-di-ricerca": {
       "cosa": "Volumi di ricerca, costo per clic, difficoltà, domande reali, per paese e lingua.",
       "fonte": "dataforseo",
       "come": "suite ~/google-ads-suite-premium — /google:keyword-volume, keyword-suggestions, analyze-serp",
       "costo": "compreso nel canone",
-      "attenzione": "⚠️ Su parole di nicchia sanitaria DataForSEO risponde «null», che NON vuol dire zero: il volume si recupera da keyword_suggestions sul seme."
+      "attenzione": "⚠️ Su parole di nicchia sanitaria DataForSEO risponde «null», che NON vuol dire zero: il volume si recupera da keyword_suggestions sul seme.",
+      "disponibile": true
     },
     "aziende-per-settore-e-paese": {
       "cosa": "Trovare AZIENDE (non profili social) per settore, paese, dimensione e fatturato. È il modo per cercare distributori e importatori che non si mostrano sui social.",
@@ -77,28 +89,32 @@
       "come": "apollo /mixed_companies/search — filtri: q_organization_keyword_tags[], organization_locations[], organization_num_employees_ranges[], revenue_range",
       "costo": "a consumo sul saldo Monid",
       "perche_monid": "È un buco vero: ScrapeCreators cerca PROFILI, non IMPRESE. La priorità commerciale numero uno di SHEis sono i distributori esteri, e un importatore spagnolo può benissimo non avere un Instagram.",
-      "verificato_il": "2026-08-03 — cercando distribuzione hair care in Spagna ha restituito aziende reali con dominio."
+      "verificato_il": "2026-08-03 — cercando distribuzione hair care in Spagna ha restituito aziende reali con dominio.",
+      "disponibile": true
     },
     "arricchimento-azienda": {
       "cosa": "Da un dominio, il profilo completo dell'azienda: dipendenti, fatturato, tecnologie, contatti.",
       "fonte": "monid",
       "come": "apollo /organizations/enrich (dal dominio) · akta /v1/company/enrichment",
       "costo": "a consumo sul saldo Monid",
-      "perche_monid": "Nessuno degli strumenti a canone arricchisce un'azienda partendo dal dominio."
+      "perche_monid": "Nessuno degli strumenti a canone arricchisce un'azienda partendo dal dominio.",
+      "disponibile": true
     },
     "verifica-email": {
       "cosa": "L'indirizzo esiste, riceve, e quanto è rischioso scrivergli.",
       "fonte": "monid",
       "come": "api.strale.io /x402/email-validate · /x402/email-deliverability-check · /x402/lead-email-verify",
       "costo": "a consumo sul saldo Monid",
-      "perche_monid": "Il canale email dell'outreach parte da zero reputazione: scrivere a indirizzi morti brucia il dominio prima ancora di aver cominciato. Nessun altro strumento nello stack lo verifica."
+      "perche_monid": "Il canale email dell'outreach parte da zero reputazione: scrivere a indirizzi morti brucia il dominio prima ancora di aver cominciato. Nessun altro strumento nello stack lo verifica.",
+      "disponibile": true
     },
     "tecnologie-sito": {
       "cosa": "Che cosa gira sul sito di un'azienda (e-commerce, CMS, pixel, marketing automation).",
       "fonte": "monid",
       "come": "api.strale.io /x402/company-tech-stack · /x402/tech-stack-detect",
       "costo": "a consumo sul saldo Monid",
-      "perche_monid": "Dice se un potenziale distributore vende già online e con che strumenti — un segnale di maturità che nessuna fonte social dà."
+      "perche_monid": "Dice se un potenziale distributore vende già online e con che strumenti — un segnale di maturità che nessuna fonte social dà.",
+      "disponibile": true
     }
   },
   "piattaforme": [

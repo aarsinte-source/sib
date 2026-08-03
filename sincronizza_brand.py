@@ -42,6 +42,7 @@ import shutil
 import sys
 from pathlib import Path
 
+QUI = Path(__file__).resolve().parent
 FONTE = Path.home() / "Desktop" / "ALKEMIA - AGENCY" / "scalers-plus" / \
     "clienti" / "sheis-beauty-aiconsult" / "data" / "BRAND-IDENTITY_sheis_2026-08-03.json"
 
@@ -52,6 +53,12 @@ GUARDRAILS_FONTE = Path.home() / "Desktop" / "ALKEMIA - AGENCY" / "scalers-plus"
 COPIE = [
     (FONTE, Path.home() / "alkemia-sheis-studio" / "src" / "brand" / "BRAND-IDENTITY.json"),
     (GUARDRAILS_FONTE, Path.home() / "alkemia-sheis-studio" / "src" / "brand" / "guardrails.json"),
+    # La mappa delle fonti di ricerca serve anche al portale, che deve poter
+    # MOSTRARE il piano e il suo costo prima di eseguirlo. Scriverla due volte
+    # significherebbe che un giorno il portale dichiara un costo e l'esecutore
+    # ne paga un altro — e nessuno dei due sembrerebbe rotto.
+    (QUI / "fonti-ricerca.json",
+     Path.home() / "alkemia-sheis-studio" / "src" / "brand" / "fonti-ricerca.json"),
 ]
 
 # ── Moduli GENERATI dalla fonte ───────────────────────────────────────────────
@@ -107,6 +114,7 @@ def _estrai(fonte: Path) -> dict:
         "cta_ammesse": rg.get("cta_ammesse", []),
         "cta_vietate": rg.get("cta_vietate", []),
         "numeri_documentati": rg.get("numeri_documentati", []),
+        "quantita_generica": rg.get("quantita_generica", {}),
     }
 
 
@@ -131,6 +139,12 @@ def _genera_python(v: dict) -> str:
         f"NEGOZIO = {json.dumps(v['negozio'], ensure_ascii=False, indent=4)}\n\n"
         f"ECCEZIONI_RADICE = {json.dumps(v['eccezioni'], ensure_ascii=False, indent=4)}\n\n"
         f"PREZZO = {json.dumps(v['prezzo'], ensure_ascii=False, indent=4)}\n\n"
+        "# ⚠️ La regola sui numeri è INVERTITA: qualunque cifra attaccata a una\n"
+        "# parola è un claim, salvo i documentati e le eccezioni. Prima era un\n"
+        "# elenco di unità sospette, e «28 lavaggi» passava da tutti e quattro i\n"
+        "# filtri perché «lavaggi» non era nell'elenco. Un elenco di unità è per\n"
+        "# costruzione incompleto.\n"
+        f"QUANTITA_GENERICA = {json.dumps(v['quantita_generica'], ensure_ascii=False, indent=4)}\n\n"
         f"FIREWALL = {json.dumps(v['firewall'], ensure_ascii=False, indent=4)}\n\n"
         "# I claim sono FORME, non parole: «clinicamente provata» al femminile\n"
         "# sfuggiva a chi cercava «provato».\n"
@@ -245,6 +259,10 @@ def _genera_js(v: dict, tipizzato: bool) -> str:
         f"export const NEGOZIO = {json.dumps(v['negozio'], ensure_ascii=False, indent=2)};\n\n"
         f"export const ECCEZIONI_RADICE = {json.dumps(v['eccezioni'], ensure_ascii=False, indent=2)};\n\n"
         f"export const PREZZO = {json.dumps(v['prezzo'], ensure_ascii=False, indent=2)};\n\n"
+        "// ⚠️ Regola sui numeri INVERTITA: qualunque cifra attaccata a una parola\n"
+        "// è un claim, salvo i documentati e le eccezioni. Prima era un elenco di\n"
+        "// unità sospette, e «28 lavaggi» passava da tutti e quattro i filtri.\n"
+        f"export const QUANTITA_GENERICA = {json.dumps(v['quantita_generica'], ensure_ascii=False, indent=2)};\n\n"
         f"export const FIREWALL = {json.dumps(v['firewall'], ensure_ascii=False, indent=2)};\n\n"
         "// I claim sono FORME, non parole: «clinicamente provata» al femminile\n"
         "// sfuggiva a chi cercava «provato».\n"
