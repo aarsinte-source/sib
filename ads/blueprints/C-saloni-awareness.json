@@ -1,0 +1,144 @@
+{
+  "$schema_version": "1.0",
+  "id": "C-saloni-awareness",
+  "label": "SALONI — awareness locale con gate zone esclusive (pilota in zona di UN distributore)",
+  "priority": 3,
+  "priority_source": "sheis-brand-core §13.3 — 'Poi lead parrucchieri' (8685768c · 55:15)",
+  "language": "it",
+  "audience_segment": "mercato",
+
+  "🔴_gate_zone_esclusive": {
+    "regola": "Ogni lead-salone va instradato al distributore titolare della zona in esclusiva, non gestito da SHEis. E' una regola POLITICA del cliente, non un'ottimizzazione.",
+    "fonte": "'Di regola non gli posso vendere, a meno che la zona non e' scoperta. Allora me lo prendo io come azienda' (6b6cc1a3 · 45:23)",
+    "input_bloccante": "La mappa zona -> distributore NON ESISTE in nessun file. E' segnata come blocking_input in guardrails.json. Va chiesta a Mauro.",
+    "come_questo_blueprint_rispetta_il_gate": "Questa campagna NON raccoglie lead. Zero moduli, zero form, zero destinazione. E' pura awareness con CTA 'chiedi al tuo distributore'. Cosi' il gate non puo' essere violato: non esiste un lead da instradare male. La domanda generata arriva al distributore di zona per via naturale — che e' esattamente la giocata approvata in diretta da Mauro.",
+    "citazione_giocata": "'gli dice: Guarda noi non possiamo venderti direttamente, pero' chiedi al tuo distributore' (6b6cc1a3 · 46:36) — 'invece che vendere mi faccio comprare' (6b6cc1a3 · 45:57), risposta di Mauro: 'Esatto, bravissimo'",
+    "🔴_condizione_di_blocco": "Nel momento in cui qualcuno chiede di aggiungere un modulo lead a questa campagna, la mappa zone diventa un BLOCCANTE ASSOLUTO. Non si aggiunge il form finche' la mappa non esiste. Un lead-salone instradato male in zona coperta e' un incidente politico con la rete, e la rete e' il canale."
+  },
+
+  "budget": {
+    "daily_eur": 3,
+    "monthly_eur_est": 91,
+    "share_of_total_pct": 9,
+    "learning_phase_status": "OK",
+    "learning_phase_note": "Questa e' l'unica delle tre campagne che NON ha un problema di apprendimento. Un adset che ottimizza per REACH genera decine di migliaia di eventi a settimana anche con 3 EUR/giorno: la soglia dei ~50 eventi/7gg e' superata il primo giorno. E' il motivo per cui una campagna di awareness a budget minimo ha senso, mentre una campagna di conversione a budget minimo no."
+  },
+
+  "campaign": {
+    "name": "SHEIS | C | SALONI | Awareness zona pilota | REACH | 2026-07",
+    "objective": "OUTCOME_AWARENESS",
+    "buying_type": "AUCTION",
+    "special_ad_categories": [],
+    "status": "PAUSED",
+    "bid_strategy": "LOWEST_COST_WITHOUT_CAP",
+    "campaign_budget_optimization": false
+  },
+
+  "adsets": [
+    {
+      "name": "SHEIS | C | IT | Saloni zona pilota | 25-60",
+      "daily_budget_cents": 300,
+      "billing_event": "IMPRESSIONS",
+      "optimization_goal": "REACH",
+      "status": "PAUSED",
+      "frequency_control_specs": [
+        { "event": "IMPRESSIONS", "interval_days": 7, "max_frequency": 2 }
+      ],
+      "frequency_note": "Cap di frequenza esplicito: su un pubblico locale piccolo, senza cap si brucia lo stesso salone dieci volte in una settimana.",
+      "targeting": {
+        "geo_locations": {
+          "custom_locations": [
+            {
+              "name": "<<GEO_ZONA_PILOTA>>",
+              "latitude": "<<GEO_LAT>>",
+              "longitude": "<<GEO_LNG>>",
+              "radius": 25,
+              "distance_unit": "kilometer"
+            }
+          ],
+          "location_types": ["home", "recent"]
+        },
+        "geo_note": "UNA sola zona pilota, scelta con Mauro, corrispondente al territorio di UN distributore identificato. Serve a due cose insieme: dimostrare il servizio di lead-gen che Mauro vuole regalare ai distributori come leva di fidelizzazione (8685768c · 52:46), e tenere il test dentro un perimetro dove il risultato e' verificabile.",
+        "age_min": 25,
+        "age_max": 60,
+        "targeting_automation": {
+          "advantage_audience": 0
+        },
+        "advantage_audience_note": "OBBLIGATORIO. Su una campagna locale a raggio stretto, advantage_audience a 1 farebbe uscire la consegna dal perimetro della zona del distributore — che qui non e' un dettaglio di performance ma il vincolo politico stesso.",
+        "flexible_spec": [
+          {
+            "interests": [
+              { "id": "<<INTEREST_ID:Parrucchiere>>", "name": "Parrucchiere / Hairdresser" },
+              { "id": "<<INTEREST_ID:Salone di bellezza>>", "name": "Beauty salon" },
+              { "id": "<<INTEREST_ID:Colorazione capelli>>", "name": "Hair coloring" }
+            ],
+            "work_positions": [
+              { "id": "<<WORK_POSITION_ID:Parrucchiere>>", "name": "Parrucchiere", "note": "Se non risolvibile, si resta sui soli interessi: in Italia il work_positions ha copertura bassa." }
+            ]
+          }
+        ],
+        "publisher_platforms": ["facebook", "instagram"],
+        "facebook_positions": ["feed", "video_feeds"],
+        "instagram_positions": ["stream", "reels"],
+        "device_platforms": ["mobile"]
+      }
+    }
+  ],
+
+  "ads": [
+    { "name": "SHEIS | C | IT | AD1 | chiedi-al-tuo-distributore", "adset_ref": "SHEIS | C | IT | Saloni zona pilota | 25-60", "creative_ref": "CR-C1", "status": "PAUSED" },
+    { "name": "SHEIS | C | IT | AD2 | 15-minuti-poltrona", "adset_ref": "SHEIS | C | IT | Saloni zona pilota | 25-60", "creative_ref": "CR-C2", "status": "PAUSED" }
+  ],
+
+  "creatives": [
+    {
+      "ref": "CR-C1",
+      "name": "SHEIS | C | CR | chiedi-al-tuo-distributore",
+      "creative_format": "photo_data",
+      "creative_format_note": "photo_data e non link_data: nessuna destinazione, nessun click verso il sito. Deliberato — vedi blocco_sito qui sotto.",
+      "object_story_spec": {
+        "page_id": "<<PAGE_ID>>",
+        "instagram_actor_id": "<<INSTAGRAM_ACTOR_ID>>",
+        "photo_data": {
+          "image_hash": "<<IMAGE_HASH:C1>>",
+          "caption": "Colore senza ammoniaca. 83 nuance. Posa 15 minuti.\n\nSHEis Color e' gia' in salone in diverse zone d'Italia.\n\nNoi non forniamo i saloni direttamente: passiamo sempre dal distributore di zona. Se vuoi provarla, chiedila al tuo distributore di fiducia."
+        }
+      }
+    },
+    {
+      "ref": "CR-C2",
+      "name": "SHEIS | C | CR | 15-minuti-poltrona",
+      "creative_format": "photo_data",
+      "object_story_spec": {
+        "page_id": "<<PAGE_ID>>",
+        "instagram_actor_id": "<<INSTAGRAM_ACTOR_ID>>",
+        "photo_data": {
+          "image_hash": "<<IMAGE_HASH:C2>>",
+          "caption": "Quindici minuti di posa, senza ammoniaca.\n\nSu una giornata piena, il tempo che si recupera per poltrona non e' un dettaglio.\n\nSHEis Color, 83 nuance, produzione italiana. Distribuita ai saloni tramite i distributori di zona: chiedila al tuo."
+        }
+      }
+    }
+  ],
+
+  "🔴_blocco_sito": {
+    "problema": "sheishair.com contiene una pagina /negozio/ con H1 'Shop'.",
+    "perche_e_un_problema": "E' esattamente cio' che il cliente ha rifiutato: 'conoscendo il retroterra culturale dei parrucchieri loro ti dicono: pero' quello e' un e-commerce' (6b6cc1a3 · 2:13:22). Un parrucchiere che arriva da un annuncio SHEis e trova quella pagina conclude che l'azienda vende diretta, e il danno e' verso la rete di distributori, non verso di lui.",
+    "conseguenza_operativa": "NESSUNA campagna manda traffico a pagamento su sheishair.com finche' quella pagina non e' rimossa o resa non raggiungibile. E' il motivo per cui tutte e tre le campagne di questo kit non hanno una landing: A e B usano moduli istantanei, C non ha destinazione.",
+    "chi_lo_risolve": "Mark Studio (fornitore WordPress). Va chiesto a Mauro di darne mandato. Fino ad allora il vincolo resta."
+  },
+
+  "kpi": {
+    "primario": "Copertura netta nella zona pilota e frequenza media",
+    "secondari": ["CPM", "Richieste al distributore riportate dal distributore stesso"],
+    "target_cpm_eur": "3-9",
+    "misurazione_vera": "L'unica misura che conta davvero non e' in Gestione Inserzioni: e' la telefonata al distributore della zona pilota a 30 giorni, per chiedergli se qualche salone ha nominato SHEis. Va messa in calendario il giorno stesso in cui la campagna parte, altrimenti non viene fatta.",
+    "attenzione": "Non promettere a Mauro lead-saloni da questa campagna. Non ne produce, per costruzione. Produce domanda che arriva al distributore. Se il valore atteso viene raccontato male, a 30 giorni sembra un fallimento mentre sta facendo esattamente il suo mestiere."
+  },
+
+  "kill_criteria": [
+    { "trigger": "Frequenza > 3,5 su 30 giorni", "azione": "Zona satura: allarga il raggio o cambia zona pilota.", "livello": "pubblico" },
+    { "trigger": "CPM > 12 EUR", "azione": "Il pubblico e' troppo stretto per il formato: togli work_positions e resta sui soli interessi.", "livello": "pubblico" },
+    { "trigger": "30 giorni e il distributore di zona non riporta nessuna richiesta", "azione": "Non spegnere subito: l'awareness a 91 EUR/mese ha tempi piu' lunghi di un mese. Riportare a 60 giorni. Se a 60 giorni e' ancora zero, chiudere e spostare il budget su A.", "livello": "campagna" },
+    { "trigger": "Un distributore si lamenta di essere scavalcato", "azione": "STOP IMMEDIATO della campagna e escalation a Mauro. Questo criterio ha precedenza su qualunque metrica di performance.", "livello": "politico" }
+  ]
+}

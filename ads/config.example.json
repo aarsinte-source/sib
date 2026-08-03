@@ -1,0 +1,66 @@
+{
+  "_istruzioni": "Copia questo file in config.local.json e riempilo quando arrivano gli accessi. config.local.json e' gitignorato: il token NON deve mai finire in un repo.",
+
+  "access_token": "INCOLLA_QUI_IL_TOKEN",
+  "_access_token_nota": "Token con permessi ads_management, pages_show_list, leads_retrieval, business_management. Meglio un token da Utente di Sistema del Business Manager SHEis: non scade. Un token utente normale scade in 60 giorni e la campagna si ferma senza preavviso.",
+
+  "ad_account_id": "act_XXXXXXXXXXXX",
+  "api_version": "v21.0",
+  "monthly_budget_cap_eur": 1000,
+  "_monthly_budget_cap_nota": "Tetto dichiarato dal cliente (500-1.000/mese). Lo script RIFIUTA di creare se la stima mensile lo supera. Non alzarlo senza una conversazione con Mauro.",
+
+  "resolve": {
+    "PAGE_ID": "",
+    "INSTAGRAM_ACTOR_ID": "",
+    "PRIVACY_URL": "https://www.sheishair.com/privacy-policy/",
+
+    "_moduli_lead": "Creali in Meta Business Suite > Tutti gli strumenti > Moduli per l'acquisizione contatti, seguendo lead_form_spec dentro ogni blueprint. Poi incolla qui gli ID.",
+    "LEAD_FORM_ID:ES": "",
+    "LEAD_FORM_ID:IT": "",
+    "LEAD_FORM_LINK": "https://www.sheishair.com/",
+    "_LEAD_FORM_LINK_nota": "Con destination_type ON_AD il click resta nel modulo e questo link non viene aperto, ma la Marketing API pretende comunque un campo link valido nel link_data.",
+
+    "_immagini": "Carica i visual con: POST /act_XXX/adimages. La risposta contiene l'hash. Formati: 1080x1080 e 1080x1350.",
+    "IMAGE_HASH:A1": "",
+    "IMAGE_HASH:A2": "",
+    "IMAGE_HASH:A3": "",
+    "IMAGE_HASH:B1": "",
+    "IMAGE_HASH:B2": "",
+    "IMAGE_HASH:B3": "",
+    "IMAGE_HASH:C1": "",
+    "IMAGE_HASH:C2": "",
+
+    "_interessi": "NON inventare questi ID. Si risolvono con: GET /search?type=adinterest&q=Davines. Un ID sbagliato non da' errore: spende sul pubblico sbagliato, in silenzio.",
+    "INTEREST_ID:Davines": "",
+    "INTEREST_ID:Kevin Murphy": "",
+    "INTEREST_ID:Alfaparf Milano": "",
+    "INTEREST_ID:Kemon": "",
+    "INTEREST_ID:Framesi": "",
+    "INTEREST_ID:Peluqueria": "",
+    "INTEREST_ID:Distribucion mayorista": "",
+    "INTEREST_ID:Parrucchiere": "",
+    "INTEREST_ID:Cosmetica professionale": "",
+    "INTEREST_ID:Salone di bellezza": "",
+    "INTEREST_ID:Colorazione capelli": "",
+    "BEHAVIOR_ID:Facebook Page admins": "",
+    "WORK_POSITION_ID:Parrucchiere": "",
+
+    "_zona_pilota_campagna_C": "Da decidere con Mauro: il territorio di UN distributore identificato. Servono nome, latitudine e longitudine del centro.",
+    "GEO_ZONA_PILOTA": "",
+    "GEO_LAT": "",
+    "GEO_LNG": "",
+
+    "CUSTOM_AUDIENCE_ID:ateco-4645": "",
+
+    "_landing_url_nota": "Servono SOLO se lanci le varianti *-web (blueprints/A-estero-spagna-web.json, B-italia-distributori-web.json) invece dei moduli nativi — vedi PRONTI-AL-LANCIO.md 'Due vie per i lead'. Deve essere il dominio VERO e pubblicato del sito Next.js (~/alkemia-sheis-web): oggi e' solo un'anteprima Vercel (noindex). Non lanciare traffico a pagamento su un dominio non confermato.",
+    "LANDING_URL:distributori-es": "",
+    "LANDING_URL:distributori-it": ""
+  },
+
+  "_supabase_nota": "Opzionale. Serve solo a campagna_da_brief.mjs / stato_accessi.mjs per scrivere in sheis_campagne invece che nel registro locale .campagne/registro.json. Stessi nomi di ~/alkemia-sheis-backend/.env — puoi anche esportarli come variabili d'ambiente (SUPABASE_URL, SUPABASE_SECRET_KEY, SUPABASE_PROJECT_REF) invece di scriverli qui. Finche' mancano, tutto funziona lo stesso in locale.",
+  "supabase": {
+    "url": "",
+    "secret_key": "",
+    "project_ref": ""
+  }
+}

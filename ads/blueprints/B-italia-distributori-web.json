@@ -1,0 +1,160 @@
+{
+  "$schema_version": "1.0",
+  "id": "B-italia-distributori-web",
+  "variante_di": "B-italia-distributori",
+  "label": "ITALIA — distributori ATECO 46.45 (angolo SHEis Color) — VARIANTE WEBSITE (non dipende da leads_retrieval)",
+  "priority": 2,
+  "priority_source": "sheis-brand-core §13.1 — 'Lead esteri, poi lead italiani' (8685768c · 55:15)",
+  "language": "it",
+  "audience_segment": "rete",
+  "activation_phase": 2,
+  "activation_note": "Identico all'originale: NON si accende nel mese 1.",
+
+  "🔴_perche_esiste_questa_variante": {
+    "problema": "Stesso di A-estero-spagna-web: il token disponibile non ha leads_retrieval (verificato eseguendo il 2026-08-03 — modulo elencabile, lead illeggibili, errore 403 '(#200) Requires leads_retrieval'). L'originale usa destination_type ON_AD.",
+    "soluzione": "destination_type WEBSITE verso /it/distributori, stesso form e stesso endpoint /api/distributori-lead di A-estero-spagna-web — un solo pezzo di backend per entrambe le lingue, cambia solo la pagina/lingua di provenienza.",
+    "prezzo_pagato": "OUTCOME_TRAFFIC/LINK_CLICKS invece di OUTCOME_LEADS/LEAD_GENERATION, stesso compromesso di A-estero-spagna-web e stessa nota su come recuperarlo quando esistera' un pixel.",
+    "stato": "[DA VERIFICARE END-TO-END] — stessa dipendenza bloccante di A-estero-spagna-web: la tabella sheis_lead_ads non esiste finche' non si applica la migrazione 0003 con un Supabase Personal Access Token."
+  },
+
+  "budget": {
+    "daily_eur": 8,
+    "monthly_eur_est": 243,
+    "share_of_total_pct": 24,
+    "learning_phase_status": "TRAFFIC_LINK_CLICKS",
+    "learning_phase_note": "LINK_CLICKS a 8 EUR/giorno produce eventi molto piu' spesso del LEAD_GENERATION nativo (che restava 'sotto soglia' nell'originale): qui l'apprendimento non e' il problema. Resta vero che il giudizio si fa su costo-per-click e sulle righe reali in sheis_lead_ads, non sul CPL."
+  },
+
+  "campaign": {
+    "name": "SHEIS | B-WEB | ITALIA | Distributori | TRAFFIC | 2026-08",
+    "objective": "OUTCOME_TRAFFIC",
+    "buying_type": "AUCTION",
+    "special_ad_categories": [],
+    "status": "PAUSED",
+    "bid_strategy": "LOWEST_COST_WITHOUT_CAP",
+    "campaign_budget_optimization": false
+  },
+
+  "adsets": [
+    {
+      "name": "SHEIS | B-WEB | IT | Distribuzione professionale | 35-60",
+      "daily_budget_cents": 800,
+      "billing_event": "IMPRESSIONS",
+      "optimization_goal": "LINK_CLICKS",
+      "destination_type": "WEBSITE",
+      "destination_note": "Pagina /it/distributori del sito Next.js — VARIANTE rispetto all'originale (modulo istantaneo ON_AD). Nessun promoted_object: non serve per LINK_CLICKS senza pixel.",
+      "status": "PAUSED",
+      "targeting": {
+        "geo_locations": {
+          "countries": ["IT"],
+          "location_types": ["home", "recent"]
+        },
+        "geo_note": "Identico all'originale: Italia intera al primo giro.",
+        "age_min": 35,
+        "age_max": 60,
+        "targeting_automation": {
+          "advantage_audience": 0
+        },
+        "advantage_audience_note": "OBBLIGATORIO, identico all'originale.",
+        "flexible_spec": [
+          {
+            "interests": [
+              { "id": "<<INTEREST_ID:Davines>>", "name": "Davines" },
+              { "id": "<<INTEREST_ID:Alfaparf Milano>>", "name": "Alfaparf Milano" },
+              { "id": "<<INTEREST_ID:Kemon>>", "name": "Kemon" },
+              { "id": "<<INTEREST_ID:Framesi>>", "name": "Framesi" },
+              { "id": "<<INTEREST_ID:Parrucchiere>>", "name": "Parrucchiere / Hairdresser" },
+              { "id": "<<INTEREST_ID:Cosmetica professionale>>", "name": "Professional cosmetics" }
+            ],
+            "behaviors": [
+              { "id": "<<BEHAVIOR_ID:Facebook Page admins>>", "name": "Amministratori di pagine Facebook", "note": "Identico all'originale." }
+            ]
+          }
+        ],
+        "publisher_platforms": ["facebook", "instagram"],
+        "facebook_positions": ["feed", "video_feeds"],
+        "instagram_positions": ["stream", "reels"],
+        "device_platforms": ["mobile", "desktop"]
+      }
+    }
+  ],
+
+  "ads": [
+    { "name": "SHEIS | B-WEB | IT | AD1 | 83-nuance-15-minuti", "adset_ref": "SHEIS | B-WEB | IT | Distribuzione professionale | 35-60", "creative_ref": "CR-B1W", "status": "PAUSED" },
+    { "name": "SHEIS | B-WEB | IT | AD2 | zone-scoperte", "adset_ref": "SHEIS | B-WEB | IT | Distribuzione professionale | 35-60", "creative_ref": "CR-B2W", "status": "PAUSED" },
+    { "name": "SHEIS | B-WEB | IT | AD3 | non-online", "adset_ref": "SHEIS | B-WEB | IT | Distribuzione professionale | 35-60", "creative_ref": "CR-B3W", "status": "PAUSED" }
+  ],
+
+  "creatives": [
+    {
+      "ref": "CR-B1W",
+      "name": "SHEIS | B-WEB | CR | 83-nuance-15-minuti",
+      "object_story_spec": {
+        "page_id": "<<PAGE_ID>>",
+        "instagram_actor_id": "<<INSTAGRAM_ACTOR_ID>>",
+        "link_data": {
+          "image_hash": "<<IMAGE_HASH:B1>>",
+          "link": "<<LANDING_URL:distributori-it>>?utm_source=meta&utm_medium=paid&utm_campaign={{campaign.name}}&utm_content={{ad.name}}",
+          "message": "83 nuance. Posa 15 minuti. Senza ammoniaca.\n\nSHEis Color e' una linea che in salone si spiega da sola: il tempo-poltrona si accorcia e il risultato si vede alla prima applicazione.\n\nProduzione italiana, zona in esclusiva, nessuna vendita online che vada a competere con il suo territorio.\n\nSe distribuisce ai saloni professionali e sta valutando una linea colore da affiancare, compili il modulo: ne parliamo in venti minuti.",
+          "name": "83 nuance, posa 15 minuti, senza ammoniaca",
+          "description": "SHEis Beauty International - Pineto (TE)",
+          "call_to_action": { "type": "APPLY_NOW", "value": { "link": "<<LANDING_URL:distributori-it>>?utm_source=meta&utm_medium=paid&utm_campaign={{campaign.name}}&utm_content={{ad.name}}" } }
+        }
+      }
+    },
+    {
+      "ref": "CR-B2W",
+      "name": "SHEIS | B-WEB | CR | zone-scoperte",
+      "object_story_spec": {
+        "page_id": "<<PAGE_ID>>",
+        "instagram_actor_id": "<<INSTAGRAM_ACTOR_ID>>",
+        "link_data": {
+          "image_hash": "<<IMAGE_HASH:B2>>",
+          "link": "<<LANDING_URL:distributori-it>>?utm_source=meta&utm_medium=paid&utm_campaign={{campaign.name}}&utm_content={{ad.name}}",
+          "message": "Abbiamo alcune zone d'Italia ancora scoperte.\n\nSHEis Beauty International, Pineto. Cosmetica professionale per capelli: colore senza ammoniaca con 83 nuance, BABILON con 99% di ingredienti di origine naturale, YOUNIC con sistema tricologico brevettato.\n\nLavoriamo solo con la distribuzione professionale, per zone in esclusiva. Chi entra in una zona, quella zona resta sua.\n\nSe distribuisce ai saloni, compili il modulo: guardiamo insieme se la sua zona e' tra quelle libere.",
+          "name": "Alcune zone sono ancora scoperte",
+          "description": "Solo distribuzione professionale",
+          "call_to_action": { "type": "APPLY_NOW", "value": { "link": "<<LANDING_URL:distributori-it>>?utm_source=meta&utm_medium=paid&utm_campaign={{campaign.name}}&utm_content={{ad.name}}" } }
+        }
+      }
+    },
+    {
+      "ref": "CR-B3W",
+      "name": "SHEIS | B-WEB | CR | non-online",
+      "object_story_spec": {
+        "page_id": "<<PAGE_ID>>",
+        "instagram_actor_id": "<<INSTAGRAM_ACTOR_ID>>",
+        "link_data": {
+          "image_hash": "<<IMAGE_HASH:B3>>",
+          "link": "<<LANDING_URL:distributori-it>>?utm_source=meta&utm_medium=paid&utm_campaign={{campaign.name}}&utm_content={{ad.name}}",
+          "message": "Non siamo in vendita online. Ne' diretta al consumatore, ne' sui marketplace.\n\nPer chi distribuisce non e' un dettaglio: e' la differenza tra costruire un marchio nei propri saloni e vederselo scontato altrove sei mesi dopo.\n\nSHEis Beauty International, produzione italiana, tre linee professionali, zona in esclusiva.\n\nSe distribuisce ai saloni professionali, compili il modulo.",
+          "name": "Un marchio che non trova online",
+          "description": "SHEis Beauty International - Italia",
+          "call_to_action": { "type": "APPLY_NOW", "value": { "link": "<<LANDING_URL:distributori-it>>?utm_source=meta&utm_medium=paid&utm_campaign={{campaign.name}}&utm_content={{ad.name}}" } }
+        }
+      }
+    }
+  ],
+
+  "landing_page_spec": {
+    "nota": "Nessun modulo lead Meta da creare per questa variante.",
+    "url_placeholder": "<<LANDING_URL:distributori-it>>?utm_source=meta&utm_medium=paid&utm_campaign={{campaign.name}}&utm_content={{ad.name}}",
+    "url_atteso": "https://<dominio-confermato>/it/distributori#richiesta — VERIFICARE il dominio reale prima di spendere (vedi stessa nota in A-estero-spagna-web.json).",
+    "form_esistente": "src/components/sections/distributori/ApplicationSection.tsx (JsonForm), stesso form di A-estero-spagna-web (contenuto in italiano).",
+    "endpoint": "POST /api/distributori-lead — stesso endpoint di A-estero-spagna-web, la lingua/pagina viaggia nel payload.",
+    "dipendenza_bloccante": "Identica a A-estero-spagna-web: tabella sheis_lead_ads non ancora creata (manca il Personal Access Token Supabase)."
+  },
+
+  "kpi": {
+    "primario": "Richieste ricevute in sheis_lead_ads",
+    "primario_perche": "Identico all'originale: a questo budget nessun proxy (CTR, CPM) sostituisce il dato vero.",
+    "secondari": ["CTR outbound", "Costo per click", "CPM"],
+    "target_ctr_note": "Stesso target dell'originale (0,8%): pubblico in lingua madre, marchi citati familiari."
+  },
+
+  "kill_criteria": [
+    { "trigger": "5.000 impression e CTR outbound < 0,5%", "azione": "Sostituisci le creativita'.", "livello": "creativita'" },
+    { "trigger": "150 EUR spesi e 0 righe nuove in sheis_lead_ads", "azione": "Verifica prima che l'endpoint funzioni (invio di prova manuale), poi eventualmente spegni B-web e rimetti il budget su A.", "livello": "tecnico/canale" },
+    { "trigger": "Frequenza > 3,5 su 30 giorni", "azione": "Identico all'originale: pubblico saturo.", "livello": "pubblico" }
+  ]
+}

@@ -1,0 +1,174 @@
+{
+  "$schema_version": "1.0",
+  "id": "A-estero-spagna-web",
+  "variante_di": "A-estero-spagna",
+  "label": "ESTERO — ricerca importatore/distributore Spagna — VARIANTE WEBSITE (non dipende da leads_retrieval)",
+  "priority": 1,
+  "priority_source": "sheis-brand-core §13.1 — 'proprio la priorita assoluta' (8685768c · 55:15)",
+  "language": "es",
+  "audience_segment": "rete",
+
+  "🔴_perche_esiste_questa_variante": {
+    "problema": "Il token Meta disponibile (System User, ~/.alkemia-secrets.env) NON ha leads_retrieval. Verificato eseguendo il 2026-08-03: un modulo istantaneo esiste ed e' elencabile, ma GET /{form_id}/leads risponde 403 '(#200) Requires leads_retrieval permission to manage the object' — stesso errore su tre pagine reali diverse, non un caso isolato. Il blueprint originale A-estero-spagna usa destination_type ON_AD (modulo nativo): con questo token, le campagne raccoglierebbero lead irraggiungibili via API — visibili solo a mano in Business Suite, senza alert, senza outreach automatico.",
+    "soluzione": "destination_type WEBSITE verso la pagina /distributori del sito Next.js (~/alkemia-sheis-web), che ha gia' il form giusto (ragione sociale, P.IVA, paese, citta', sito, area di mercato — vedi src/content/pages/distributori.*.json) collegato a un endpoint /api/distributori-lead che scrive DIRETTAMENTE in sheis_lead_ads (Supabase). Non passa da Meta: leads_retrieval smette di essere un problema per questa via.",
+    "prezzo_pagato": "L'obiettivo campagna e' OUTCOME_TRAFFIC/LINK_CLICKS, non OUTCOME_LEADS/LEAD_GENERATION: senza un pixel Meta sul sito (oggi assente, il sito usa ancora nessun tracciamento pubblicitario) l'ottimizzazione OFFSITE_CONVERSIONS non e' disponibile, quindi Meta ottimizza per i click, non per le compilazioni effettive del form. E' un compromesso dichiarato, non un errore: a questi budget (22 EUR/giorno) l'apprendimento LEAD_GENERATION era gia' 'limited permanente' nell'originale, quindi la perdita di sofisticazione ML e' minore di quanto sembri. Quando un Pixel + evento Lead esisteranno sul sito, questa variante va aggiornata a OFFSITE_CONVERSIONS.",
+    "stato": "[DA VERIFICARE END-TO-END] — il codice della pagina/endpoint/tabella e' pronto (vedi PRONTI-AL-LANCIO.md), ma la tabella sheis_lead_ads non esiste ancora sul Supabase reale (manca il Personal Access Token sbp_... per applicare la migrazione — stesso tipo di prerequisito umano di leads_retrieval, ma un'azione self-service di 2 minuti, non una revisione app Meta). NON lanciare traffico a pagamento su questa variante finche' un invio di prova reale non e' arrivato visibile in sheis_lead_ads."
+  },
+
+  "budget": {
+    "daily_eur": 22,
+    "monthly_eur_est": 669,
+    "share_of_total_pct": 67,
+    "learning_phase_status": "TRAFFIC_LINK_CLICKS",
+    "learning_phase_note": "LINK_CLICKS impara da un evento molto piu' frequente del LEAD_GENERATION nativo (ogni click, non solo le compilazioni): a 22 EUR/giorno esce dall'apprendimento in pochi giorni. La domanda che conta pero' non e' 'quanti click' ma 'quante richieste vere in sheis_lead_ads' — quella si giudica su 30 giorni come nell'originale."
+  },
+
+  "campaign": {
+    "name": "SHEIS | A-WEB | ESTERO ES | Importatore | TRAFFIC | 2026-08",
+    "objective": "OUTCOME_TRAFFIC",
+    "buying_type": "AUCTION",
+    "special_ad_categories": [],
+    "status": "PAUSED",
+    "bid_strategy": "LOWEST_COST_WITHOUT_CAP",
+    "campaign_budget_optimization": false,
+    "cbo_note": "Stessa scelta dell'originale: un solo adset, ABO piu' leggibile di CBO."
+  },
+
+  "adsets": [
+    {
+      "name": "SHEIS | A-WEB | ES | Distribucion profesional | 30-60",
+      "daily_budget_cents": 2200,
+      "billing_event": "IMPRESSIONS",
+      "optimization_goal": "LINK_CLICKS",
+      "destination_type": "WEBSITE",
+      "destination_note": "Pagina /es/distributori del sito Next.js (~/alkemia-sheis-web) — VARIANTE rispetto all'originale che usa un modulo istantaneo ON_AD. Nessun promoted_object: non serve per LINK_CLICKS su un sito senza pixel.",
+      "status": "PAUSED",
+      "targeting": {
+        "geo_locations": {
+          "countries": ["ES"],
+          "location_types": ["home", "recent"]
+        },
+        "age_min": 30,
+        "age_max": 60,
+        "age_note": "Identica all'originale: eta media dei referenti dichiarata dal cliente 40-60 anni (b7fe5124 · 1:27:27), aperta a 30 per non tagliare i secondi livelli aziendali.",
+        "locales": [],
+        "targeting_automation": {
+          "advantage_audience": 0
+        },
+        "advantage_audience_note": "OBBLIGATORIO, identico all'originale.",
+        "flexible_spec": [
+          {
+            "interests": [
+              { "id": "<<INTEREST_ID:Davines>>", "name": "Davines" },
+              { "id": "<<INTEREST_ID:Kevin Murphy>>", "name": "Kevin Murphy" },
+              { "id": "<<INTEREST_ID:Alfaparf Milano>>", "name": "Alfaparf Milano" },
+              { "id": "<<INTEREST_ID:Peluqueria>>", "name": "Peluqueria / Hairdressing" },
+              { "id": "<<INTEREST_ID:Distribucion mayorista>>", "name": "Wholesale distribution" }
+            ]
+          }
+        ],
+        "interests_source": "Identico all'originale — sheis-brand-core §6 (6b6cc1a3 · 2:02:40 e 2:03:44)",
+        "publisher_platforms": ["facebook", "instagram"],
+        "facebook_positions": ["feed", "video_feeds"],
+        "instagram_positions": ["stream", "reels"],
+        "positions_note": "Identico all'originale.",
+        "device_platforms": ["mobile", "desktop"]
+      }
+    }
+  ],
+
+  "ads": [
+    { "name": "SHEIS | A-WEB | ES | AD1 | no-venta-online", "adset_ref": "SHEIS | A-WEB | ES | Distribucion profesional | 30-60", "creative_ref": "CR-A1W", "status": "PAUSED" },
+    { "name": "SHEIS | A-WEB | ES | AD2 | babilon-99", "adset_ref": "SHEIS | A-WEB | ES | Distribucion profesional | 30-60", "creative_ref": "CR-A2W", "status": "PAUSED" },
+    { "name": "SHEIS | A-WEB | ES | AD3 | un-importador", "adset_ref": "SHEIS | A-WEB | ES | Distribucion profesional | 30-60", "creative_ref": "CR-A3W", "status": "PAUSED" }
+  ],
+
+  "creatives": [
+    {
+      "ref": "CR-A1W",
+      "name": "SHEIS | A-WEB | CR | no-venta-online",
+      "object_story_spec": {
+        "page_id": "<<PAGE_ID>>",
+        "instagram_actor_id": "<<INSTAGRAM_ACTOR_ID>>",
+        "link_data": {
+          "image_hash": "<<IMAGE_HASH:A1>>",
+          "link": "<<LANDING_URL:distributori-es>>?utm_source=meta&utm_medium=paid&utm_campaign={{campaign.name}}&utm_content={{ad.name}}",
+          "message": "Fabricante italiano de cosmetica profesional capilar. Buscamos un importador para Espana.\n\nLo que probablemente le importe mas: no vendemos online. Ni venta directa al consumidor, ni marketplaces. Lo que entra en su territorio, se queda en su territorio.\n\nTres lineas: color sin amoniaca con 83 matices y 15 minutos de exposicion, BABILON con 99% de ingredientes de origen natural, y YOUNIC, sistema tricologico patentado desde 2002.\n\nZona en exclusiva. Solo distribucion profesional.",
+          "name": "Buscamos un importador para Espana",
+          "description": "SHEis Beauty International - Pineto, Italia",
+          "call_to_action": {
+            "type": "APPLY_NOW",
+            "value": {
+              "link": "<<LANDING_URL:distributori-es>>?utm_source=meta&utm_medium=paid&utm_campaign={{campaign.name}}&utm_content={{ad.name}}"
+            }
+          }
+        }
+      }
+    },
+    {
+      "ref": "CR-A2W",
+      "name": "SHEIS | A-WEB | CR | babilon-99",
+      "object_story_spec": {
+        "page_id": "<<PAGE_ID>>",
+        "instagram_actor_id": "<<INSTAGRAM_ACTOR_ID>>",
+        "link_data": {
+          "image_hash": "<<IMAGE_HASH:A2>>",
+          "link": "<<LANDING_URL:distributori-es>>?utm_source=meta&utm_medium=paid&utm_campaign={{campaign.name}}&utm_content={{ad.name}}",
+          "message": "BABILON: wash, care y style con 99% de ingredientes de origen natural.\n\nEs un dato de formulacion, no una promesa. Fabricacion italiana, para salones profesionales.\n\nBuscamos un importador para Espana. Zona en exclusiva, sin venta online que le compita en su propio territorio.",
+          "name": "BABILON - 99% de origen natural",
+          "description": "Fabricante italiano. Distribucion profesional.",
+          "call_to_action": {
+            "type": "APPLY_NOW",
+            "value": {
+              "link": "<<LANDING_URL:distributori-es>>?utm_source=meta&utm_medium=paid&utm_campaign={{campaign.name}}&utm_content={{ad.name}}"
+            }
+          }
+        }
+      }
+    },
+    {
+      "ref": "CR-A3W",
+      "name": "SHEIS | A-WEB | CR | un-importador",
+      "object_story_spec": {
+        "page_id": "<<PAGE_ID>>",
+        "instagram_actor_id": "<<INSTAGRAM_ACTOR_ID>>",
+        "link_data": {
+          "image_hash": "<<IMAGE_HASH:A3>>",
+          "link": "<<LANDING_URL:distributori-es>>?utm_source=meta&utm_medium=paid&utm_campaign={{campaign.name}}&utm_content={{ad.name}}",
+          "message": "Un solo importador para Espana.\n\nSomos un fabricante italiano de cosmetica profesional capilar, con tres lineas y una red de distribucion que trabaja por zonas en exclusiva.\n\nNo estamos en venta online y no tenemos intencion de estarlo: es una decision de canal, no una fase.\n\nSi distribuye a salones profesionales, complete el formulario y hablemos veinte minutos.",
+          "name": "Un solo importador para Espana",
+          "description": "SHEis Beauty International - Italia",
+          "call_to_action": {
+            "type": "APPLY_NOW",
+            "value": {
+              "link": "<<LANDING_URL:distributori-es>>?utm_source=meta&utm_medium=paid&utm_campaign={{campaign.name}}&utm_content={{ad.name}}"
+            }
+          }
+        }
+      }
+    }
+  ],
+
+  "landing_page_spec": {
+    "nota": "Non esiste un modulo lead Meta da creare per questa variante: la destinazione e' una pagina reale del sito.",
+    "url_placeholder": "<<LANDING_URL:distributori-es>>?utm_source=meta&utm_medium=paid&utm_campaign={{campaign.name}}&utm_content={{ad.name}}",
+    "url_atteso": "https://<dominio-confermato>/es/distributori#richiesta — VERIFICARE il dominio reale prima di spendere: il sito ~/alkemia-sheis-web e' oggi solo su anteprima Vercel (noindex), sheishair.com resta il sito storico WordPress e NON ha questa pagina.",
+    "form_esistente": "src/components/sections/distributori/ApplicationSection.tsx (JsonForm) — campi gia' corretti: ragione sociale, P.IVA, paese, citta', sito, area di mercato.",
+    "endpoint": "POST /api/distributori-lead (~/alkemia-sheis-web) — scrive in sheis_lead_ads (Supabase). Vedi ~/alkemia-sheis-backend/migrations/0006_lead_ads.sql.",
+    "dipendenza_bloccante": "La tabella sheis_lead_ads non esiste finche' qualcuno non applica la migrazione con un Supabase Personal Access Token (sbp_...) — vedi applica_migrazioni.py. Finche' manca, l'endpoint risponde errore onesto (mai un falso 'grazie, ti contatteremo' quando il lead va perso)."
+  },
+
+  "kpi": {
+    "primario": "Richieste ricevute in sheis_lead_ads (non il CTR: quello e' un proxy, la tabella e' la verita')",
+    "secondari": ["CTR outbound", "Costo per click", "CPM", "Tasso di qualifica sulle richieste ricevute (portafoglio marchi dichiarato)"],
+    "target_cpl_grezzo_eur": "8-20 (stesso target dell'originale, da validare senza il beneficio dell'ottimizzazione LEAD_GENERATION)",
+    "benchmark_note": "Nessun dato storico su questa combinazione (TRAFFIC verso una landing con form proprio). I target dell'originale restano il riferimento, da ricalibrare dopo i primi 30 giorni."
+  },
+
+  "kill_criteria": [
+    { "trigger": "5.000 impression e CTR outbound < 0,4%", "azione": "Sostituisci le creativita', NON spegnere la campagna.", "livello": "creativita'" },
+    { "trigger": "200 EUR spesi e 0 righe nuove in sheis_lead_ads", "azione": "Verifica PRIMA che l'endpoint funzioni davvero (invio di prova manuale): un form rotto e una campagna senza pubblico giusto sembrano identici da fuori.", "livello": "tecnico" },
+    { "trigger": "400 EUR spesi e meno di 3 richieste qualificate", "azione": "Ruota l'angolo, come nell'originale.", "livello": "angolo" },
+    { "trigger": "1 mese pieno (circa 670 EUR) e 0 richieste qualificate", "azione": "STOP campagna, stessa logica dell'originale: sposta il budget su outreach LinkedIn.", "livello": "canale" }
+  ]
+}
