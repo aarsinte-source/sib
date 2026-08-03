@@ -1,4 +1,12 @@
 import { BRAND, GUARDRAILS } from "@/lib/brand";
+import {
+  ECCEZIONI_RADICE,
+  NUMERI_DOCUMENTATI,
+  negozioEccezione,
+  numeroDocumentato,
+} from "@/lib/vincoli-brand";
+
+const ELENCO_DOCUMENTATI = NUMERI_DOCUMENTATI.map((n) => n.valore).join(", ");
 
 /**
  * Il linter blocca, non avvisa (SPEC.md §"Vincoli non negoziabili" #2). Viene
@@ -59,6 +67,10 @@ function cercaTermini(testo: string, termini: readonly string[], regola: string,
         : new RegExp(`\\b${escapeRegExp(termine)}\\b`, "giu");
     const m = pattern.exec(testo);
     if (m) {
+      // Il confronto per radice ha un costo: «ordina» + 3 lettere prende anche
+      // «ordinario». Le parole innocenti sono dichiarate nella fonte (§lessico.
+      // eccezioni_radice) e valgono per tutti e quattro i filtri allo stesso modo.
+      if (negozioEccezione(m[0])) continue;
       trovate.push({
         regola,
         descrizione: `${descrizione} — termine vietato: "${termine}"`,
@@ -126,7 +138,12 @@ function checkFirewallM29(testo: string): ViolazioneLinter[] {
 
 /** Regola 4 — claim numerici non documentati (best-effort: vedi commento sopra). */
 function checkNumeriNonDocumentati(testo: string): ViolazioneLinter[] {
-  const numeriAmmessi = new Set(["15", "99", "3", "tre"]);
+  // ⚠️ Difetto misurato il 3/8: la whitelist era un insieme di CIFRE NUDE, senza
+  // contesto — quindi «99% di sconto» e «15 anni di esperienza» passavano di qui
+  // e venivano bloccati dagli altri tre filtri. A decidere è il contesto, non la
+  // cifra. La regola vive ora in un solo posto: NUMERI_DOCUMENTATI, generato da
+  // BRAND-IDENTITY, che tutti e quattro leggono.
+  //
   // ⚠️ Il `\b` finale NON può applicarsi a "%": misurato il 2026-08-03.
   // "%" non è un carattere di parola, quindi `%\b` pretende che subito dopo ci sia
   // una lettera — cioè intercetta "100%naturale" e lascia passare "100% naturale",
@@ -137,15 +154,13 @@ function checkNumeriNonDocumentati(testo: string): ViolazioneLinter[] {
   const trovate: ViolazioneLinter[] = [];
   let m: RegExpExecArray | null;
   while ((m = pattern.exec(testo)) !== null) {
-    const numero = m[1];
+    if (numeroDocumentato(testo, m.index, m.index + m[0].length)) continue;
     const unita = m[2] ?? m[3] ?? "";
-    if (!numeriAmmessi.has(numero)) {
-      trovate.push({
-        regola: "numero_non_documentato",
-        descrizione: `Numero "${numero}" accostato a "${unita}" non è nell'elenco dei dati documentati (15 minuti di posa, 99% naturale, 3 fasi YOUNIC) — marca [DA CONFERMARE] o rimuovi`,
-        frase: estraiContesto(testo, m.index, m[0].length),
-      });
-    }
+    trovate.push({
+      regola: "numero_non_documentato",
+      descrizione: `Numero "${m[1]}" accostato a "${unita}" non è fra i dati documentati (${ELENCO_DOCUMENTATI}) — non basta la cifra, serve il contesto giusto: «99% di origine naturale» sì, «99% di sconto» no. Marca [DA CONFERMARE] o rimuovi`,
+      frase: estraiContesto(testo, m.index, m[0].length),
+    });
   }
   return trovate;
 }

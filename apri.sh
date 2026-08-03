@@ -55,10 +55,19 @@ echo
 verde "SHEis Studio è acceso."
 echo "  $URL"
 echo
-grigio "  Il database non è ancora inizializzato: le pagine si aprono e dicono cosa manca,"
-grigio "  invece di rompersi. Per accenderlo davvero servono due minuti:"
-grigio "    export SUPABASE_ACCESS_TOKEN=sbp_...        (supabase.com/dashboard/account/tokens)"
-grigio "    python3 ~/alkemia-sheis-backend/applica_migrazioni.py --applica"
+
+# Lo stato del database si CHIEDE, non si assume. Prima queste righe dicevano
+# sempre «non ancora inizializzato»: era vero il giorno in cui furono scritte e
+# falso il giorno dopo. Un messaggio che non può diventare falso è un messaggio
+# che qualcuno prima o poi crede a torto.
+STATO=$(curl -s -m 5 "$URL/api/stato" 2>/dev/null || true)
+if printf '%s' "$STATO" | grep -q '"ok":true'; then
+  grigio "  Database acceso: quello che salvi resta."
+else
+  grigio "  Il database non risponde: le pagine si aprono e dicono cosa manca,"
+  grigio "  invece di rompersi. Per accenderlo:"
+  grigio "    python3 ~/alkemia-sheis-backend/applica_migrazioni.py --verifica"
+fi
 echo
 grigio "  Per fermarlo:  lsof -ti tcp:$PORTA | xargs kill"
 echo
