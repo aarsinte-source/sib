@@ -47,14 +47,26 @@ def testo_da_lintare(contenuto: dict) -> str:
     return "\n\n".join(p for p in pezzi if p.strip())
 
 
-def gia_pubblicato(db: supabase.SupabaseClient, contenuto_id: str, canale: str) -> bool:
+MARCATORE_AMBIGUO = "AMBIGUO(rete/timeout)"
+
+
+def stato_pubblicazione_precedente(db: supabase.SupabaseClient, contenuto_id: str, canale: str) -> tuple[bool, str, str]:
+    """(letto_ok, stato, ultimo_errore). Se `letto_ok=False` la lettura è
+    fallita: il chiamante NON deve interpretarlo come "non ancora
+    pubblicato" (era il bug — con la lettura rotta il worker procedeva e
+    poteva pubblicare un duplicato). `stato=""` significa che non esiste
+    ancora nessun tentativo precedente.
+    """
     esito = db.select(
         "sheis_pubblicazioni",
-        query=f"select=stato&contenuto_id=eq.{contenuto_id}&canale=eq.{canale}",
+        query=f"select=stato,ultimo_errore&contenuto_id=eq.{contenuto_id}&canale=eq.{canale}",
     )
     if not esito.ok:
-        return False
-    return any(r.get("stato") in ("inviato", "pubblicato") for r in esito.dati)
+        return False, "", ""
+    if not esito.dati:
+        return True, "", ""
+    riga = esito.dati[0]
+    return True, riga.get("stato") or "", riga.get("ultimo_errore") or ""
 
 
 def account_sheis_per_canale(canale: str, account_live: list[dict], mappa_attesa: dict) -> tuple[bool, str]:
@@ -113,6 +125,18 @@ def account_sheis_per_canale(canale: str, account_live: list[dict], mappa_attesa
     )
 
 
+def _scrivi_pubblicazione(db: supabase.SupabaseClient, cid: str, canale: str, campi: dict) -> bool:
+    """Centralizza l'upsert su sheis_pubblicazioni E il controllo del suo
+    esito — prima non veniva mai controllato (difetto ③, revisione
+    avversariale 2026-08-03). Ritorna True solo se la riga è DAVVERO scritta.
+    """
+    esito = db.upsert("sheis_pubblicazioni", {"contenuto_id": cid, "canale": canale, **campi},
+                       conflitto="contenuto_id,canale")
+    if not esito.ok:
+        print(f"    🔴 scrittura in sheis_pubblicazioni fallita per {cid[:8]}…/{canale}: {esito.errore}")
+    return esito.ok
+
+
 def gestisci_candidato(db: supabase.SupabaseClient, zc: zernio.ZernioClient, contenuto: dict,
                         account_live: list[dict], mappa_attesa: dict) -> str:
     cid = contenuto["id"]
@@ -121,61 +145,81 @@ def gestisci_candidato(db: supabase.SupabaseClient, zc: zernio.ZernioClient, con
         print(f"  ⏭️  {cid[:8]}… — nessun 'canale' impostato, salto")
         return "saltato"
 
-    if gia_pubblicato(db, cid, canale):
+    letto_ok, stato_prec, errore_prec = stato_pubblicazione_precedente(db, cid, canale)
+    if not letto_ok:
+        print(f"  ⚠️  {cid[:8]}…/{canale} — impossibile leggere lo stato precedente dal DB: "
+              f"salto per sicurezza, NON pubblico alla cieca (rischio di duplicare un post già uscito)")
+        return "errore_lettura_db"
+    if stato_prec in ("inviato", "pubblicato"):
         print(f"  ⏭️  {cid[:8]}…/{canale} — già pubblicato in precedenza (idempotenza), salto")
         return "idempotente"
+    if stato_prec == "fallito" and MARCATORE_AMBIGUO in (errore_prec or ""):
+        # ⚠️ REGRESSIONE ④ (revisione avversariale 2026-08-03): un esito
+        # 'fallito' veniva SEMPRE ritentato al giro successivo. Va bene per
+        # un rifiuto HTTP netto (4xx: la richiesta non è mai stata accettata),
+        # ma un timeout/errore di rete DOPO l'invio è ambiguo — Zernio
+        # potrebbe aver comunque creato il post. Ritentare alla cieca rischia
+        # un doppio post reale. Qui NON si ritenta in automatico: serve una
+        # verifica umana su Zernio prima di sbloccare il prossimo tentativo
+        # (es. cancellando la riga o correggendone lo stato a mano).
+        print(f"  ⏸️  {cid[:8]}…/{canale} — tentativo precedente AMBIGUO (rete/timeout): Zernio potrebbe "
+              f"averlo comunque pubblicato. Non ritento in automatico — serve verifica manuale su Zernio.")
+        return "ambiguo_da_verificare"
 
     testo = testo_da_lintare(contenuto)
     esito_lint = linter.lint_pubblicazione(testo, canale=canale)
     if not esito_lint.ok:
         motivo = esito_lint.motivo_blocco()
         print(f"  🛑 {cid[:8]}…/{canale} — BLOCCATO dal linter:\n{esito_lint.render()}")
-        db.upsert("sheis_pubblicazioni", {
-            "contenuto_id": cid, "canale": canale, "stato": "bloccato",
-            "motivo_blocco": motivo,
+        _scrivi_pubblicazione(db, cid, canale, {
+            "stato": "bloccato", "motivo_blocco": motivo,
             "linter_esito": json.dumps([v.__dict__ for v in esito_lint.violazioni]),
-        }, conflitto="contenuto_id,canale")
+        })
         return "bloccato_linter"
 
     ok_account, msg_account = account_sheis_per_canale(canale, account_live, mappa_attesa)
     if not ok_account:
         print(f"  🛑 {cid[:8]}…/{canale} — BLOCCATO: {msg_account}")
-        db.upsert("sheis_pubblicazioni", {
-            "contenuto_id": cid, "canale": canale, "stato": "bloccato",
-            "motivo_blocco": msg_account,
-        }, conflitto="contenuto_id,canale")
+        _scrivi_pubblicazione(db, cid, canale, {"stato": "bloccato", "motivo_blocco": msg_account})
         return "bloccato_account"
 
     ok_finestra, msg_finestra = finestra.dentro_finestra()
     if not ok_finestra:
         print(f"  ⏳ {cid[:8]}…/{canale} — {msg_finestra}: resta in coda per il prossimo run")
-        db.upsert("sheis_pubblicazioni", {
-            "contenuto_id": cid, "canale": canale, "stato": "in_coda",
-            "motivo_blocco": "",
-        }, conflitto="contenuto_id,canale")
+        _scrivi_pubblicazione(db, cid, canale, {"stato": "in_coda", "motivo_blocco": ""})
         return "in_coda_finestra"
 
     if not LIVE:
         print(f"  🧪 DRY-RUN {cid[:8]}…/{canale} — passerebbe TUTTI i gate. Payload che partirebbe:")
         print(f"      testo: {testo[:120]}…")
-        db.upsert("sheis_pubblicazioni", {
-            "contenuto_id": cid, "canale": canale, "stato": "in_coda", "motivo_blocco": "",
-        }, conflitto="contenuto_id,canale")
+        _scrivi_pubblicazione(db, cid, canale, {"stato": "in_coda", "motivo_blocco": ""})
         return "dry_run_pronto"
 
     esito = zc.crea_post(testo, [canale])
     if esito.ok:
-        print(f"  ✅ {cid[:8]}…/{canale} — pubblicato")
-        db.upsert("sheis_pubblicazioni", {
-            "contenuto_id": cid, "canale": canale, "stato": "inviato",
-            "zernio_post_id": str((esito.dati or {}).get("id", "")),
-        }, conflitto="contenuto_id,canale")
-        return "pubblicato"
-    print(f"  ❌ {cid[:8]}…/{canale} — invio fallito: {esito.errore}")
-    db.upsert("sheis_pubblicazioni", {
-        "contenuto_id": cid, "canale": canale, "stato": "fallito", "ultimo_errore": esito.errore,
-    }, conflitto="contenuto_id,canale")
-    return "fallito"
+        scritto = _scrivi_pubblicazione(db, cid, canale, {
+            "stato": "inviato", "zernio_post_id": str((esito.dati or {}).get("id", "")),
+        })
+        if scritto:
+            print(f"  ✅ {cid[:8]}…/{canale} — pubblicato e registrato")
+            return "pubblicato"
+        # ⚠️ REGRESSIONE ③ applicata anche qui (revisione avversariale
+        # 2026-08-03): il post su Zernio È PARTITO DAVVERO, ma se la
+        # scrittura del suo stato fallisce, il prossimo run non trova la
+        # riga 'inviato' in stato_pubblicazione_precedente() e ripubblica lo STESSO
+        # contenuto — un doppio post reale. Questo va segnalato forte,
+        # mai riportato come un "pubblicato" qualunque.
+        print(f"  🔴🔴 {cid[:8]}…/{canale} — PUBBLICATO SU ZERNIO ma la registrazione nel DB È FALLITA: "
+              f"il prossimo run rischia di ripubblicarlo. Intervento manuale necessario "
+              f"(zernio_post_id={(esito.dati or {}).get('id', '?')}).")
+        return "pubblicato_non_registrato"
+
+    ultimo_errore = f"{MARCATORE_AMBIGUO}: {esito.errore}" if esito.ambiguo else esito.errore
+    print(f"  ❌ {cid[:8]}…/{canale} — invio fallito"
+          + (" (AMBIGUO — non sarà ritentato in automatico)" if esito.ambiguo else " (rifiuto netto, ritentabile)")
+          + f": {esito.errore}")
+    _scrivi_pubblicazione(db, cid, canale, {"stato": "fallito", "ultimo_errore": ultimo_errore})
+    return "fallito_ambiguo" if esito.ambiguo else "fallito"
 
 
 def main() -> int:

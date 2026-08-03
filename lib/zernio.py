@@ -50,6 +50,12 @@ class Esito:
     status: int = 0
     dati: list | dict = field(default_factory=dict)
     errore: str = ""
+    # True quando NON sappiamo se la richiesta è arrivata a Zernio: timeout o
+    # errore di rete DOPO l'invio. In quel caso il post potrebbe essere
+    # partito lo stesso — un retry automatico rischia un doppio post reale.
+    # False = fallimento HTTP netto (4xx/5xx): la richiesta È arrivata ed È
+    # stata rifiutata, quindi NON è stata pubblicata — sicuro da ritentare.
+    ambiguo: bool = False
 
 
 class ZernioClient:
@@ -73,11 +79,17 @@ class ZernioClient:
                 grezzo = r.read().decode("utf-8")
                 return Esito(ok=True, status=r.status, dati=json.loads(grezzo) if grezzo else {})
         except urllib.error.HTTPError as e:
+            # La richiesta È arrivata al server ed È stata rifiutata (4xx/5xx
+            # con risposta): non ambiguo, non pubblicato, sicuro da ritentare.
             return Esito(ok=False, status=e.code, errore=e.read().decode("utf-8", errors="replace")[:400])
         except urllib.error.URLError as e:
-            return Esito(ok=False, errore=f"rete: {e}")
+            # Copre anche il timeout (che in urllib arriva come URLError con
+            # un socket.timeout/TimeoutError come reason): non sappiamo se il
+            # server ha ricevuto ed elaborato la richiesta PRIMA che la
+            # risposta si perdesse. Ambiguo per costruzione.
+            return Esito(ok=False, errore=f"rete: {e}", ambiguo=True)
         except (ValueError, OSError) as e:
-            return Esito(ok=False, errore=f"{type(e).__name__}: {e}")
+            return Esito(ok=False, errore=f"{type(e).__name__}: {e}", ambiguo=True)
 
     def accounts(self) -> Esito:
         return self._req("GET", "/accounts")
