@@ -6,6 +6,7 @@ import { contenutiDelPiano, aggiornaContenuto, type Contenuto } from "@/lib/dati
 import { pillarDelPiano } from "@/lib/pillar";
 import { richiedeRuolo, RUOLI_PROPONE } from "@/lib/auth";
 import { rispondiErrore } from "@/lib/api";
+import { lintTesto } from "@/lib/linter";
 
 /**
  * Fase 4: i testi. TRE mestieri diversi per ogni contenuto.
@@ -124,10 +125,67 @@ export async function POST(req: Request) {
       marchiCoinvolti(daFare),
     );
 
-    const { dati: grezzo, motore, ripieghi } = await generaJSON(
-      sistema,
-      `Scrivi i testi per questi ${daFare.length} contenuti:\n\n${elenco}`,
-    );
+    const richiesta = `Scrivi i testi per questi ${daFare.length} contenuti:\n\n${elenco}`;
+    let { dati: grezzo, motore, ripieghi } = await generaJSON(sistema, richiesta);
+
+    /**
+     * ⚠️ IL LINTER GIRA QUI, NON SOLO ALL'APPROVAZIONE.
+     *
+     * Difetto misurato il 2026-08-04: i testi venivano salvati senza controllo
+     * e il blocco arrivava al momento di approvare — cioè dopo che qualcuno li
+     * aveva letti tutti e trenta e si era convinto che il piano fosse pronto.
+     * Uno di essi diceva «Una mascarilla cuesta 15€»: un prezzo, in spagnolo,
+     * nel parlato di un video.
+     *
+     * Rimandare il controllo non lo rende più severo: lo rende più caro. Qui si
+     * controlla subito e si RICHIEDE una volta al modello di riscrivere solo i
+     * pezzi bocciati, elencandogli cosa ha sbagliato. Se sbaglia di nuovo, il
+     * testo si salva lo stesso ma il contenuto resta non approvabile: nessuno
+     * deve poter credere che sia a posto.
+     */
+    const violazioniDi = (o: Record<string, unknown>): string[] => {
+      const pezzi = [
+        str(o.copy), str(o.copySecondario), str(o.cta), str(o.copyUgc),
+        ...(o.copyGrafica && typeof o.copyGrafica === "object"
+          ? Object.values(o.copyGrafica as Record<string, unknown>).map((x) => str(x))
+          : []),
+      ].filter(Boolean);
+      const fuori: string[] = [];
+      for (const p of pezzi) {
+        const e = lintTesto(p);
+        if (e.bloccato) fuori.push(...e.violazioni.map((v) => `«${p.slice(0, 60)}…» → ${v.descrizione}`));
+      }
+      return fuori;
+    };
+
+    const primaMandata = Array.isArray(grezzo.testi) ? grezzo.testi : [];
+    const daRifare = primaMandata
+      .map((x) => ({ o: (x ?? {}) as Record<string, unknown>, v: violazioniDi((x ?? {}) as Record<string, unknown>) }))
+      .filter((x) => x.v.length > 0);
+
+    if (daRifare.length > 0) {
+      const spiegazione =
+        `Questi testi violano le regole di marca e vanno RISCRITTI. Per ciascuno ti dico cosa non va.\n\n` +
+        daRifare
+          .map((x) => `--- id: ${str(x.o.id)}\n` + x.v.map((s) => `  · ${s}`).join("\n"))
+          .join("\n\n") +
+        `\n\nRiscrivi SOLO questi ${daRifare.length}, con la stessa forma JSON. Togli il problema, non aggirarlo: se il problema è un prezzo, non serve scriverlo in lettere.`;
+      try {
+        const secondo = await generaJSON(sistema, `${richiesta}\n\n${spiegazione}`);
+        const corretti = Array.isArray(secondo.dati.testi) ? secondo.dati.testi : [];
+        const perId = new Map(corretti.map((x) => [str(((x ?? {}) as Record<string, unknown>).id), x]));
+        grezzo = {
+          ...grezzo,
+          testi: primaMandata.map((x) => {
+            const id = str(((x ?? {}) as Record<string, unknown>).id);
+            return perId.get(id) ?? x;
+          }),
+        };
+      } catch {
+        // La riscrittura è un miglioramento, non una condizione: se fallisce si
+        // tiene la prima mandata e il linter all'approvazione farà da rete.
+      }
+    }
 
     const testi = Array.isArray(grezzo.testi) ? grezzo.testi : [];
     const perContenuto = new Map<string, Record<string, unknown>>();

@@ -140,6 +140,54 @@ export async function lavoriRecenti(limite = 30): Promise<Lavoro[]> {
  * mostrando «in coda» per sempre, e nessuno saprebbe che dall'altra parte non
  * c'è nessuno.
  */
+/**
+ * CHI ESEGUE COSA, e perché non tutto può stare sullo stesso computer.
+ *
+ * ⚠️ MISURATO il 2026-08-04. L'API di Higgsfield risponde **521** alle
+ * chiamate che arrivano dal VPS — provato su IPv4 e IPv6, tre tentativi, con
+ * le credenziali trasferite e il workspace selezionato. Non è un problema di
+ * autenticazione: Cloudflare tratta diversamente il traffico che arriva dai
+ * datacenter. Dal portatile la stessa chiamata passa.
+ *
+ * Conseguenza pratica: la generazione creativa resta legata a una macchina
+ * vera. Il resto — ricerca, pubblicazione, campagne — gira sul VPS e quindi
+ * anche a Mac spento.
+ *
+ * Questa mappa esiste per DIRLO. Senza, una generazione messa in coda mentre
+ * il Mac è spento resterebbe lì e il portale mostrerebbe «in coda» all'infinito
+ * senza spiegare cosa aspetta.
+ */
+export const COPERTURA: Record<TipoLavoro, { dove: string; sempreAcceso: boolean; nota: string }> = {
+  "ricerca-mercato": {
+    dove: "VPS",
+    sempreAcceso: true,
+    nota: "Solo chiamate HTTP: gira anche a computer spento.",
+  },
+  "pubblica-zernio": {
+    dove: "VPS",
+    sempreAcceso: true,
+    nota: "Solo chiamate HTTP: gira anche a computer spento.",
+  },
+  "costruisci-campagna": {
+    dove: "VPS",
+    sempreAcceso: true,
+    nota: "Gira anche a computer spento.",
+  },
+  diagnostica: {
+    dove: "VPS",
+    sempreAcceso: true,
+    nota: "Gira anche a computer spento. Lo stato dei crediti Higgsfield resta però leggibile solo dal portatile.",
+  },
+  "genera-creativa": {
+    dove: "portatile",
+    sempreAcceso: false,
+    nota:
+      "Higgsfield rifiuta le connessioni dal VPS (521, misurato il 2026-08-04 su IPv4 e IPv6): " +
+      "non è l'autenticazione, è Cloudflare che blocca gli indirizzi da datacenter. " +
+      "La generazione resta in coda finché l'esecutore sul portatile la raccoglie — non fallisce, aspetta.",
+  },
+};
+
 export async function statoCoda(): Promise<{
   inAttesa: number;
   inCorso: number;
@@ -170,8 +218,19 @@ export async function statoCoda(): Promise<{
   // «i miei lavori si stanno muovendo?», e a quella risponde.
   const esecutoreVivo = corso.length > 0 || attesaMin === null || attesaMin < 5;
 
+  // Quanti fra quelli in attesa aspettano una macchina che potrebbe essere
+  // spenta: è un'attesa diversa da «la coda è lunga», e va detta diversamente.
+  const attesaSuPortatile = await sbFetch<Array<{ id: string }>>("sheis_lavori", {
+    query: "select=id&stato=eq.in_attesa&tipo=eq.genera-creativa",
+  }).catch(() => []);
+
   let nota = "";
-  if (attesa.length && !esecutoreVivo) {
+  if (attesaSuPortatile.length && !esecutoreVivo) {
+    nota =
+      `${attesaSuPortatile.length} generazioni creative aspettano il portatile. ` +
+      COPERTURA["genera-creativa"].nota +
+      " Si accende con: LIVE=1 python3 ~/alkemia-sheis-workers/esecutore.py --tipi genera-creativa";
+  } else if (attesa.length && !esecutoreVivo) {
     nota =
       `${attesa.length} lavori fermi da ${attesaMin} minuti: l'esecutore non sta girando. ` +
       "Si accende sul VPS con `systemctl start sheis-esecutore` (o, in locale, " +

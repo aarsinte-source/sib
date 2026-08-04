@@ -1,7 +1,7 @@
 /**
  * GENERATO da sincronizza_brand.py — NON modificare a mano.
  * 
- * Le liste qui sotto vengono da BRAND-IDENTITY_sheis_2026-08-03.json (impronta 97d075c475d5eba4).
+ * Le liste qui sotto vengono da BRAND-IDENTITY_sheis_2026-08-03.json (impronta e7b58e9f3bb1473c).
  * Modificarle qui significa reintrodurre esattamente il difetto per cui
  * questo file esiste: quattro linter con quattro copie divergenti delle
  * stesse regole, e verdetti opposti sullo stesso testo.
@@ -10,7 +10,7 @@
  *     python3 ~/alkemia-sheis-backend/sincronizza_brand.py --allinea
  * 
  */
-export const IMPRONTA_FONTE = "97d075c475d5eba4";
+export const IMPRONTA_FONTE = "e7b58e9f3bb1473c";
 
 export type NumeroDocumentato = {
   valore: string;
@@ -76,6 +76,19 @@ export const ECCEZIONI_RADICE = [
   "ordinata"
 ];
 
+export const ECCEZIONI_CONTESTO_NEGOZIO = [
+  {
+    "termine": "carrello",
+    "contesto_richiesto": "salone|saloni|cabina|postazione|piastra|strumenti|phon|forbici|poltrona|lavaggio|servizio|parrucchier",
+    "perche": "⚠️ FALSO POSITIVO MISURATO il 2026-08-04. In un salone il «carrello» è il mobile con gli strumenti, non quello della spesa. Il testo bloccato era «Il cliente entra. Guarda il carrello. Vede la piastra.»: vocabolario di mestiere, non e-commerce. Un filtro che blocca il corretto insegna a ignorarlo, e allora smette di proteggere."
+  },
+  {
+    "termine": "cart",
+    "contesto_richiesto": "salon|station|trolley|tools|styling",
+    "perche": "Stessa cosa in inglese: il trolley del salone."
+  }
+];
+
 export const PREZZO = [
   "€",
   "euro",
@@ -122,6 +135,14 @@ export const QUANTITA_GENERICA = {
     {
       "pattern": "\\b(via|viale|piazza|numero civico|cap|p\\.?\\s?iva|telefono|tel\\.)\\b",
       "perche": "recapiti e indirizzi"
+    },
+    {
+      "pattern": "\\b(tipo|type|tipolog\\w+)\\s*\\d[A-Ca-c]?\\b|\\b\\d[A-Ca-c]\\b(?=[^.]{0,20}\\b(capell|hair|ricc|curl|cabell))",
+      "perche": "⚠️ FALSO POSITIVO MISURATO il 2026-08-04: «type 3-4 hair» è la classificazione standard della tipologia di capello (2A…4C), non un dato di prodotto. Bloccarla significa impedire di parlare di ricci, che è metà del mestiere."
+    },
+    {
+      "pattern": "\\b\\d{1,2}\\s*[-–/]\\s*\\d{1,2}\\b(?=[^.]{0,25}\\b(capell|hair|ricc|curl|cabell|tipo|type))",
+      "perche": "Stessa cosa nella forma con l'intervallo: «3-4», «2A-3B»."
     }
   ],
   "regola": "Un numero seguito da una parola BLOCCA, a meno che: (a) corrisponda a un numero documentato col suo contesto richiesto, oppure (b) nella stessa frase compaia una delle eccezioni. Chi vuole usare un dato nuovo lo fa documentare, non lo scrive e basta."
@@ -243,14 +264,14 @@ export const FORME_FLESSE: string[] = [
 ];
 
 export const NEGAZIONI_AMMESSE: string[] = [
-  "non (siamo|vendiamo|c'?è|esiste)[^.\\n]{0,30}(online|e-?commerce|vendita)",
-  "n[éeè]\\s+(amazon|e-?commerce|online)",
-  "nessun[ao]?\\s+(e-?commerce|vendita online|negozio online)",
-  "niente\\s+e-?commerce",
-  "we don'?t sell online",
-  "no online sales",
-  "no vendemos online",
-  "no estamos en venta online"
+  "(?<![a-zA-ZàèéìòùÀÈÉÌÒÙ])non (siamo|vendiamo|c'?è|esiste)[^.\\n]{0,30}(online|e-?commerce|vendita)",
+  "(?<![a-zA-ZàèéìòùÀÈÉÌÒÙ])n[éeè]\\s+(amazon|e-?commerce|online)",
+  "(?<![a-zA-ZàèéìòùÀÈÉÌÒÙ])nessun[ao]?\\s+(e-?commerce|vendita online|negozio online)",
+  "(?<![a-zA-ZàèéìòùÀÈÉÌÒÙ])niente\\s+e-?commerce",
+  "(?<![a-zA-ZàèéìòùÀÈÉÌÒÙ])we don'?t sell online",
+  "(?<![a-zA-ZàèéìòùÀÈÉÌÒÙ])no online sales",
+  "(?<![a-zA-ZàèéìòùÀÈÉÌÒÙ])no vendemos online",
+  "(?<![a-zA-ZàèéìòùÀÈÉÌÒÙ])no estamos en venta online"
 ];
 
 export const CTA_AMMESSE = [
