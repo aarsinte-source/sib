@@ -34,16 +34,24 @@ echo "SIB — allineamento"
 problemi=0
 qualcosa_cambiato=0
 
-# Vero se il contenuto della sottocartella differisce dal repo sorgente.
-# Si confronta il contenuto, non lo stato di git: è ciò che finisce su GitHub.
+# Vero se il contenuto versionato differisce.
+#
+# ⚠️ Si confrontano gli ALBERI GIT, non le cartelle di lavoro. Un `diff -r`
+# fra le due cartelle non può funzionare: il repo sorgente contiene anche i
+# file NON versionati — node_modules, .next, .env, .DS_Store — che nel
+# monorepo non ci sono e non ci devono essere. Confrontarli faceva risultare
+# «diverso» tutto, sempre, anche subito dopo un allineamento riuscito.
+#
+# `git subtree` preserva l'oggetto albero del sottoprogetto, quindi i due hash
+# coincidono esattamente quando il contenuto versionato coincide. È un
+# confronto di un hash contro un hash: non può sbagliare né in un senso né
+# nell'altro.
 differisce() {
   local sorgente="$1" prefisso="$2"
-  diff -rq \
-    --exclude='.git' --exclude='__pycache__' --exclude='node_modules' \
-    --exclude='.next' --exclude='venv' --exclude='*.pyc' --exclude='*.log' \
-    --exclude='.env' --exclude='.env.*' --exclude='tsconfig.tsbuildinfo' \
-    "$sorgente" "$prefisso" >/dev/null 2>&1
-  [ $? -ne 0 ]
+  local a b
+  a="$(cd "$sorgente" && git rev-parse "HEAD^{tree}" 2>/dev/null)"
+  b="$(git rev-parse "HEAD:$prefisso" 2>/dev/null)"
+  [ -z "$a" ] || [ -z "$b" ] || [ "$a" != "$b" ]
 }
 
 for r in "${REPO[@]}"; do
