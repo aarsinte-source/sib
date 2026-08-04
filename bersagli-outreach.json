@@ -1,0 +1,203 @@
+{
+  "_meta": {
+    "titolo": "Bersagli outreach SHEis — chi cercare, dove, e chi scartare",
+    "aggiornato": "2026-08-04",
+    "fonte": "Indicazioni dirette di Andrei, 2026-08-04, sopra la priorità commerciale già dichiarata da Mauro (estero prima, Italia poi, saloni per ultimi).",
+    "perche_esiste": "Prima l'outreach cercava «distributori» e basta. Un elenco di distributori senza un filtro di FASCIA è un elenco di aziende sbagliate: chi tratta prodotto da supermercato non compra una linea professionale, e contattarlo brucia il contatto e il tempo. Il filtro di fascia è la parte che vale, non quello geografico."
+  },
+  "mercati": {
+    "spagna": {
+      "priorita": 1,
+      "paese": "ES",
+      "lingua": "es",
+      "chi": "importatori e distributori che VOGLIONO portare in Spagna prodotto italiano di altissima fascia",
+      "perche": "È il beachhead dichiarato (scoring paesi: ES 8,1 > FR 6,4 > DACH 5,7 > JP 5,6 > UK 5,2). La leva è il Made in Italy: chi importa cerca esattamente quello che SHEis è.",
+      "cerca_anche": [
+        "importador",
+        "distribuidor exclusivo",
+        "cosmética profesional",
+        "peluquería profesional",
+        "distribución capilar"
+      ],
+      "segnali_di_fascia_alta": [
+        "dichiara esclusive di marchi europei",
+        "ha un catalogo di marchi e non un magazzino generalista",
+        "fa formazione ai saloni (accademia, corsi, masterclass)",
+        "parla di 'profesional' e non di 'venta al público'",
+        "presenza a fiere di settore (Salón Look, Cosmobeauty)"
+      ],
+      "note_operative": "⚠️ Nodo ancora aperto e non deciso da Mauro: distributore o importatore. Ogni dossier deve marcare esplicitamente quale dei due è, finché non arriva una decisione.",
+      "settori_apollo": [
+        "hair care distribution",
+        "professional hair products",
+        "cosmetics distributor",
+        "hairdressing supplies",
+        "beauty products wholesale"
+      ],
+      "_nota_fonte": "⚠️ MISURATO il 2026-08-04: la ricerca profili Instagram per parole generiche restituisce l'industria sbagliata (skateboard, alluminio, biciclette) e il paese sbagliato (Brasile, Venezuela, Messico). Cerca PROFILI, non IMPRESE. La fonte giusta è Apollo via Monid, che filtra per settore e paese — ed è esattamente la capacità che giustifica Monid nello stack."
+    },
+    "italia": {
+      "priorita": 2,
+      "paese": "IT",
+      "lingua": "it",
+      "chi": "distributori di prodotto professionale di FASCIA ALTA, per saloni di livello",
+      "regioni": [
+        "Piemonte",
+        "Liguria",
+        "Sardegna",
+        "Sicilia",
+        "Campania"
+      ],
+      "perche_queste_regioni": "Indicate da Andrei il 2026-08-04. Sono le zone dove la rete SHEis ha copertura debole o assente: cercare dove si è già coperti significa mettere due distributori sulla stessa zona, e la mappa delle zone esclusive esiste proprio per evitarlo.",
+      "cerca_anche": [
+        "distribuzione prodotti professionali capelli",
+        "concessionario prodotti parrucchieri",
+        "grossista cosmetica professionale",
+        "accademia parrucchieri"
+      ],
+      "segnali_di_fascia_alta": [
+        "tratta marchi professionali riconoscibili, non private label anonime",
+        "fa formazione: accademia, corsi tecnici, masterclass, educational",
+        "ha agenti sul territorio, non solo un magazzino",
+        "il sito parla ai parrucchieri, non ai consumatori",
+        "espone a fiere (Cosmoprof Bologna, Estetica)"
+      ],
+      "settori_apollo": [
+        "distribuzione prodotti parrucchieri",
+        "professional hair products",
+        "cosmetics distributor",
+        "hairdressing supplies"
+      ],
+      "luoghi_apollo": {
+        "_perche": "⚠️ MISURATO il 2026-08-04. Apollo vuole il luogo in INGLESE e come parametro separato: «Piemonte» non trova niente, «Piedmont, Italy» trova. E la copertura delle regioni piccole è sottile, quindi accanto alla regione si cerca anche la città capoluogo: un distributore di Palermo è schedato su Palermo, non su Sicily.",
+        "Piemonte": [
+          "Piedmont, Italy",
+          "Turin, Italy"
+        ],
+        "Liguria": [
+          "Liguria, Italy",
+          "Genoa, Italy"
+        ],
+        "Sardegna": [
+          "Sardinia, Italy",
+          "Cagliari, Italy"
+        ],
+        "Sicilia": [
+          "Sicily, Italy",
+          "Palermo, Italy",
+          "Catania, Italy"
+        ],
+        "Campania": [
+          "Campania, Italy",
+          "Naples, Italy"
+        ]
+      }
+    }
+  },
+  "scarta_se": [
+    {
+      "segno": "vende al consumatore finale",
+      "come_si_vede": "e-commerce aperto al pubblico, prezzi visibili, 'acquista ora', marketplace",
+      "perche": "Un distributore che vende al pubblico è in concorrenza coi saloni che dovrebbe servire. È il conflitto che SHEis evita per statuto: nessun prezzo pubblico, nessuna vendita diretta."
+    },
+    {
+      "segno": "catalogo generalista da supermercato",
+      "come_si_vede": "shampoo da banco, marchi da grande distribuzione, casalinghi accanto alla cosmetica",
+      "perche": "Chi tratta prodotto di massa non ha la rete di saloni a cui SHEis serve arrivare, e non sa vendere un prodotto tecnico."
+    },
+    {
+      "segno": "solo rivendita, nessuna formazione",
+      "come_si_vede": "nessuna accademia, nessun corso, nessun tecnico",
+      "perche": "⚠️ È il discriminante più forte, e non è nostro: viene dalla classificazione Profit/Break-even/KO già in uso. Un distributore che non forma non fa provare il prodotto, e una colorazione professionale senza prova non si vende."
+    },
+    {
+      "segno": "è già nella rete SHEis",
+      "come_si_vede": "presente in sheis_distributori",
+      "perche": "Contattare un cliente come se fosse un prospect è il modo più veloce di sembrare un'azienda che non sa chi ha in casa."
+    }
+  ],
+  "punteggio": {
+    "_nota": "Somma dei pesi, da 0 a 100. Sotto 40 non si contatta: meglio dieci contatti giusti che cento sbagliati, perché un contatto bruciato non si recupera e i distributori italiani del settore sono qualche centinaio.",
+    "voci": [
+      {
+        "voce": "fa formazione ai saloni",
+        "peso": 30
+      },
+      {
+        "voce": "tratta marchi professionali riconoscibili",
+        "peso": 20
+      },
+      {
+        "voce": "nella regione bersaglio (Italia) o nel paese bersaglio (estero)",
+        "peso": 15
+      },
+      {
+        "voce": "parla ai professionisti e non al consumatore",
+        "peso": 15
+      },
+      {
+        "voce": "presenza a fiere di settore",
+        "peso": 10
+      },
+      {
+        "voce": "ha agenti o tecnici sul territorio",
+        "peso": 10
+      }
+    ],
+    "soglia_contatto": 40
+  },
+  "come_si_apre": {
+    "_nota": "La voce è quella di `voce-umana.ts`: frasi corte, a capo spesso, poche virgole, mai trattini come pausa, prima persona. Qui sotto solo l'ANGOLO, non il testo: il testo si scrive sul singolo, altrimenti si sente che è un modello.",
+    "spagna": "Siamo un'azienda italiana che produce, non un intermediario. Chi importa dall'Italia di solito cerca esattamente questo. La prima domanda è cosa gli manca oggi nel suo catalogo, non cosa abbiamo noi.",
+    "italia": "Nella sua regione non abbiamo ancora un riferimento. Non è una promessa di esclusiva: è il motivo per cui gli sto scrivendo proprio a lui e non a venti persone insieme.",
+    "mai": [
+      "mai promettere l'esclusiva di zona in un primo messaggio: la mappa delle zone la decide Mauro",
+      "mai citare prezzi o condizioni in chat",
+      "mai dire «siamo leader» o «prodotti di eccellenza»: lo dicono tutti e non significa niente"
+    ]
+  },
+  "marchi_da_scartare": {
+    "_perche": "⚠️ MISURATO il 2026-08-04. La prima passata sulla Spagna ha messo in cima Revlon Professional e Tahe: sono PRODUTTORI di prodotti per capelli, cioè concorrenti. Il filtro sul testo non li prende, perché la loro homepage non dice «fabricante»: dice il nome del marchio, che tutti già conoscono. Un elenco di contatti che contiene i tuoi concorrenti non è imperfetto: è pericoloso, perché chi lo usa manda a un concorrente un messaggio che gli dice cosa stai facendo. Qui l'elenco è deterministico.",
+    "concorrenti_validati": [
+      "Davines",
+      "Kemon",
+      "Alfaparf",
+      "Framesi",
+      "Insight Professional",
+      "Echoline",
+      "Vitalis",
+      "Sebastian",
+      "Kevin Murphy",
+      "Oribe"
+    ],
+    "produttori_noti": [
+      "Revlon",
+      "L'Or[ée]al",
+      "Loreal",
+      "Wella",
+      "Schwarzkopf",
+      "Henkel",
+      "Redken",
+      "Matrix",
+      "Goldwell",
+      "Joico",
+      "Paul Mitchell",
+      "Tigi",
+      "Moroccanoil",
+      "Olaplex",
+      "Tahe",
+      "Montibello",
+      "Salerm",
+      "Lendan",
+      "Nirvel",
+      "Postquam",
+      "Farmavita",
+      "Kerastase",
+      "Shu Uemura",
+      "Pantene",
+      "Garnier",
+      "Syoss"
+    ],
+    "regola": "Il confronto è sul NOME dell'azienda, non sul testo del sito, e non fa distinzione fra maiuscole e minuscole. Un nome che contiene uno di questi è scartato senza punteggio: non è un difetto di grado."
+  }
+}
