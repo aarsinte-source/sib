@@ -105,6 +105,7 @@ def _estrai(fonte: Path) -> dict:
         "nome_fonte": fonte.name,
         "negozio": va["lessico_da_negozio"],
         "eccezioni": va.get("eccezioni_radice", []),
+        "eccezioni_contesto_negozio": va.get("eccezioni_contesto_negozio", []),
         "prezzo": va["prezzi_e_cifre_commerciali"],
         "firewall": va["firewall"],
         "firewall_pattern": va.get("firewall_pattern", []),
@@ -138,6 +139,9 @@ def _genera_python(v: dict) -> str:
         f"IMPRONTA_FONTE = {v['impronta_fonte']!r}\n\n"
         f"NEGOZIO = {json.dumps(v['negozio'], ensure_ascii=False, indent=4)}\n\n"
         f"ECCEZIONI_RADICE = {json.dumps(v['eccezioni'], ensure_ascii=False, indent=4)}\n\n"
+        "# Termini VIETATI che diventano leciti solo in un contesto preciso: in un\n"
+        "# salone il «carrello» è il mobile con gli strumenti, non quello della spesa.\n"
+        f"ECCEZIONI_CONTESTO_NEGOZIO = {json.dumps(v['eccezioni_contesto_negozio'], ensure_ascii=False, indent=4)}\n\n"
         f"PREZZO = {json.dumps(v['prezzo'], ensure_ascii=False, indent=4)}\n\n"
         "# ⚠️ La regola sui numeri è INVERTITA: qualunque cifra attaccata a una\n"
         "# parola è un claim, salvo i documentati e le eccezioni. Prima era un\n"
@@ -231,6 +235,25 @@ def negozio_eccezione(frase: str) -> bool:
     return bool(_ECCEZIONI_RE and _ECCEZIONI_RE.fullmatch(frase.strip()))
 
 
+def negozio_eccezione_contesto(testo: str, inizio: int, fine: int) -> bool:
+    """Il termine è vietato in generale ma lecito in QUESTO contesto?
+
+    Diverso da `negozio_eccezione`: lì la parola è innocente di per sé
+    («ordinario»), qui è vietata e diventa lecita solo se accanto compare il
+    contesto dichiarato. Stessa forma di `numero_documentato`.
+
+    Caso misurato: in un salone il «carrello» è il mobile con gli strumenti,
+    non quello della spesa — «Il cliente entra. Guarda il carrello. Vede la
+    piastra.» è vocabolario di mestiere. Bloccarlo insegna a ignorare il filtro.
+    """
+    trovato = testo[inizio:fine].strip().lower()
+    intorno = testo[max(0, inizio - 120): fine + 120]
+    for e in ECCEZIONI_CONTESTO_NEGOZIO:
+        if e["termine"].lower() in trovato and _re.search(e["contesto_richiesto"], intorno, _re.IGNORECASE):
+            return True
+    return False
+
+
 def numero_documentato(testo: str, inizio: int, fine: int) -> bool:
     """Il numero trovato fra `inizio` e `fine` è uno di quelli che il cliente ha
     documentato? Serve il contesto: «99%» da solo non dice niente, «99% di
@@ -258,6 +281,7 @@ def _genera_js(v: dict, tipizzato: bool) -> str:
         + t +
         f"export const NEGOZIO = {json.dumps(v['negozio'], ensure_ascii=False, indent=2)};\n\n"
         f"export const ECCEZIONI_RADICE = {json.dumps(v['eccezioni'], ensure_ascii=False, indent=2)};\n\n"
+        f"export const ECCEZIONI_CONTESTO_NEGOZIO = {json.dumps(v['eccezioni_contesto_negozio'], ensure_ascii=False, indent=2)};\n\n"
         f"export const PREZZO = {json.dumps(v['prezzo'], ensure_ascii=False, indent=2)};\n\n"
         "// ⚠️ Regola sui numeri INVERTITA: qualunque cifra attaccata a una parola\n"
         "// è un claim, salvo i documentati e le eccezioni. Prima era un elenco di\n"
