@@ -27,7 +27,8 @@ import re
 import unicodedata
 from dataclasses import dataclass, field
 
-from .vincoli_brand import (QUANTITA_GENERICA, PATTERN_NEGOZIO, negozio_eccezione, numero_documentato,
+from .vincoli_brand import (QUANTITA_GENERICA, PATTERN_NEGOZIO, negozio_eccezione,
+                            negozio_eccezione_contesto, numero_documentato,
                             nega_il_canale, viola_firewall, CLAIM_VIETATI,
                             FIREWALL_PATTERN, PREZZO)
 
@@ -285,8 +286,14 @@ def lint_pubblicazione(testo: str, canale: str = "generico") -> LintResult:
             v.append(Violazione(BLOCK, "claim-non-documentato", dettaglio, m.group(0).strip()))
 
     for viol in _find(testo, NEGOZIO_PATTERNS, BLOCK, "lessico-da-negozio"):
-        if not _negozio_ammesso(testo, viol.frase):
-            v.append(viol)
+        if _negozio_ammesso(testo, viol.frase):
+            continue
+        # Vietato in generale, lecito in questo contesto: il «carrello» del
+        # salone è il mobile con gli strumenti. Vedi negozio_eccezione_contesto.
+        pos = testo.lower().find(viol.frase.strip().lower())
+        if pos >= 0 and negozio_eccezione_contesto(testo, pos, pos + len(viol.frase.strip())):
+            continue
+        v.append(viol)
 
     # claim numerici: BLOCK solo se la cifra NON è nel perimetro whitelisted
     for pat, dettaglio in CLAIM_QUANTIFICATO:

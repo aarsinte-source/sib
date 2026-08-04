@@ -1,0 +1,18 @@
+# File che NON devono mai viaggiare verso il VPS.
+#
+# ⚠️ Il .env sta qui per un motivo misurato il 2026-08-04: un rsync --delete
+# senza questa esclusione ha sovrascritto il .env del server con quello locale.
+# Sembrano lo stesso file e non lo sono: quello locale si appoggia al .env di
+# ~/alkemia-sheis-backend, che sul VPS non esiste. Risultato: l'esecutore è
+# ripartito dicendo «Mancano SUPABASE_URL/SUPABASE_SECRET_KEY» e la coda si è
+# fermata senza che nessuno lo sapesse.
+#
+# Il .env del server è composto da `aggiorna-vps.sh`, non copiato.
+.env
+.env.*
+.git
+__pycache__
+*.pyc
+venv
+*.log
+esecutore-creative.log
