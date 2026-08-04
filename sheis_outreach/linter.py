@@ -7,7 +7,8 @@ Un BLOCK non è un warning: è uno stop.
 import re
 from dataclasses import dataclass, field
 
-from .vincoli_brand import (QUANTITA_GENERICA, PATTERN_NEGOZIO, negozio_eccezione, numero_documentato,
+from .vincoli_brand import (QUANTITA_GENERICA, PATTERN_NEGOZIO, negozio_eccezione,
+                            negozio_eccezione_contesto, numero_documentato,
                             nega_il_canale, viola_firewall, CLAIM_VIETATI,
                             FIREWALL_PATTERN, PREZZO)
 
